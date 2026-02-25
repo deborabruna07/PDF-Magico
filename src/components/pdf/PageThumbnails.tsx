@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Trash2, RotateCcw } from 'lucide-react';
+import { Trash2, RotateCcw, RotateCw } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { PDFPageData } from '@/types/pdf-editor';
 import { cn } from '@/lib/utils';
@@ -11,24 +11,25 @@ interface PageThumbnailsProps {
   onPageSelect: (pageIndex: number) => void;
   onRemovePage: (pageIndex: number) => void;
   onRestorePage: (pageIndex: number) => void;
+  onRotatePage: (pageIndex: number) => void; // NOVO
 }
 
 function Thumbnail({
   pdfDoc,
-  pageIndex,
-  removed,
+  page,
   isActive,
   onClick,
   onRemove,
   onRestore,
+  onRotate,
 }: {
   pdfDoc: PDFDocumentProxy;
-  pageIndex: number;
-  removed: boolean;
+  page: PDFPageData;
   isActive: boolean;
   onClick: () => void;
   onRemove: () => void;
   onRestore: () => void;
+  onRotate: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [rendered, setRendered] = useState(false);
@@ -36,80 +37,95 @@ function Thumbnail({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const page = await pdfDoc.getPage(pageIndex + 1);
-      const viewport = page.getViewport({ scale: 0.3 });
+      const pdfPage = await pdfDoc.getPage(page.pageIndex + 1);
+      const viewport = pdfPage.getViewport({ scale: 0.3 });
       const canvas = canvasRef.current;
       if (!canvas || cancelled) return;
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       const ctx = canvas.getContext('2d')!;
-      await page.render({ canvasContext: ctx, viewport }).promise;
+      await pdfPage.render({ canvasContext: ctx, viewport }).promise;
       if (!cancelled) setRendered(true);
     })();
     return () => { cancelled = true; };
-  }, [pdfDoc, pageIndex]);
+  }, [pdfDoc, page.pageIndex]);
 
   return (
     <div
       className={cn(
-        'group relative cursor-pointer rounded-lg border-2 transition-all',
-        isActive && !removed ? 'border-sidebar-accent-color' : 'border-transparent',
-        removed ? 'opacity-40' : 'hover:border-sidebar-fg/30'
+        'group relative cursor-pointer rounded-xl border-2 transition-all duration-300 overflow-hidden shadow-sm',
+        isActive && !page.removed ? 'border-primary ring-4 ring-primary/10' : 'border-transparent bg-muted/30',
+        page.removed ? 'opacity-50 grayscale' : 'hover:border-primary/50 hover:shadow-md'
       )}
-      onClick={!removed ? onClick : undefined}
+      onClick={!page.removed ? onClick : undefined}
     >
-      <canvas
-        ref={canvasRef}
-        className={cn('w-full rounded-md', removed && 'grayscale')}
-      />
-      <div className="absolute bottom-1 left-1 rounded bg-sidebar-bg/80 px-1.5 py-0.5 text-[10px] font-medium text-sidebar-fg-active">
-        {pageIndex + 1}
+      <div className="p-2 bg-white flex items-center justify-center overflow-hidden min-h-[120px]">
+        <canvas
+          ref={canvasRef}
+          className="rounded shadow-sm transition-transform duration-500 ease-in-out"
+          style={{ transform: `rotate(${page.rotation || 0}deg)`, maxWidth: '100%', maxHeight: '140px' }}
+        />
       </div>
-      {!removed ? (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="absolute right-1 top-1 hidden rounded-md bg-destructive p-1 text-destructive-foreground group-hover:flex transition-colors hover:bg-destructive/80"
-          title="Remover página"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      ) : (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRestore(); }}
-          className="absolute right-1 top-1 rounded-md bg-success p-1 text-success-foreground transition-colors hover:bg-success/80"
-          title="Restaurar página"
-        >
-          <RotateCcw className="h-3 w-3" />
-        </button>
-      )}
+      
+      {/* Etiqueta da Página mais bonita */}
+      <div className="absolute bottom-2 left-2 rounded-md bg-black/60 backdrop-blur-md px-2 py-1 text-[10px] font-bold text-white shadow-sm">
+        {page.pageIndex + 1}
+      </div>
+
+      {/* Botões Flutuantes (Glassmorphism) */}
+      <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        {!page.removed ? (
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); onRotate(); }}
+              className="rounded-full bg-white/90 backdrop-blur shadow-sm p-1.5 text-slate-700 hover:bg-primary hover:text-white transition-colors"
+              title="Rodar 90º"
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="rounded-full bg-white/90 backdrop-blur shadow-sm p-1.5 text-slate-700 hover:bg-red-500 hover:text-white transition-colors"
+              title="Remover página"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); onRestore(); }}
+            className="rounded-full bg-green-500/90 backdrop-blur shadow-sm p-1.5 text-white hover:bg-green-600 transition-colors"
+            title="Restaurar página"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 export function PageThumbnails({
-  pdfDoc,
-  pages,
-  currentPage,
-  onPageSelect,
-  onRemovePage,
-  onRestorePage,
+  pdfDoc, pages, currentPage, onPageSelect, onRemovePage, onRestorePage, onRotatePage
 }: PageThumbnailsProps) {
   return (
-    <div className="flex h-full w-52 flex-col bg-sidebar-bg border-r border-sidebar-border-color">
-      <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-sidebar-fg">
-        Páginas ({pages.filter(p => !p.removed).length}/{pages.length})
+    <div className="flex h-full w-56 flex-col bg-slate-50 border-r border-slate-200 shadow-inner">
+      <div className="px-5 py-4 flex items-center justify-between border-b border-slate-200 bg-white">
+        <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+          Páginas
+        </span>
+        <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-1 rounded-full">
+          {pages.filter(p => !p.removed).length}/{pages.length}
+        </span>
       </div>
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 pb-3 space-y-2">
+      <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4">
         {pages.map((page) => (
           <Thumbnail
-            key={page.pageIndex}
-            pdfDoc={pdfDoc}
-            pageIndex={page.pageIndex}
-            removed={page.removed}
-            isActive={currentPage === page.pageIndex}
+            key={page.pageIndex} pdfDoc={pdfDoc} page={page} isActive={currentPage === page.pageIndex}
             onClick={() => onPageSelect(page.pageIndex)}
             onRemove={() => onRemovePage(page.pageIndex)}
             onRestore={() => onRestorePage(page.pageIndex)}
+            onRotate={() => onRotatePage(page.pageIndex)}
           />
         ))}
       </div>
