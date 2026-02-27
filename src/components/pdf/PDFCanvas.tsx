@@ -195,7 +195,6 @@ export function PDFCanvas({
                   transformOrigin: 'center center'
                 }} 
               >
-                {/* ✨ GATINHO FLUTUANTE ADICIONADO AQUI ✨ */}
                 {editingText === ann.id && ann.type === 'text' && (
                   <img 
                     src="gatinho-text.png" 
@@ -223,20 +222,41 @@ export function PDFCanvas({
                     >
                       {ann.type === 'text' && (
                         <div className="flex items-center gap-2 border-r border-pink-100 pr-2 mr-1">
-                          <input type="color" value={ann.color} onChange={(e) => onUpdateAnnotation(ann.id, { color: e.target.value })} className="w-7 h-7 rounded-full cursor-pointer" />
+                          
+                          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-pink-200 shadow-sm hover:scale-110 transition-transform flex items-center justify-center bg-white relative">
+                            <input 
+                              type="color" 
+                              value={ann.color} 
+                              onChange={(e) => onUpdateAnnotation(ann.id, { color: e.target.value })} 
+                              className="absolute w-[200%] h-[200%] cursor-pointer border-none p-0 bg-transparent"
+                              style={{ backgroundColor: 'transparent' }}
+                            />
+                          </div>
+
+                          {/* ✨ AJUSTE: Número suavizado e sem negrito ✨ */}
+                          <input 
+                            type="number" 
+                            min="8" 
+                            max="72" 
+                            value={ann.fontSize} 
+                            onChange={(e) => onUpdateAnnotation(ann.id, { fontSize: parseInt(e.target.value) })}
+                            className="w-11 h-7 text-[13px] font-medium border-pink-200 text-pink-700 border-2 border-pink-100 rounded-full text-center outline-none focus:border-pink-300 transition-all bg-white"
+                            title="Tamanho da fonte"
+                          />
+                          
                           <button onClick={() => onUpdateAnnotation(ann.id, { fontWeight: ann.fontWeight === 'bold' ? 'normal' : 'bold' })}
                             className={cn("w-7 h-7 flex items-center justify-center rounded-lg border transition-all",
-                              ann.fontWeight === 'bold' ? "bg-pink-100 border-pink-300 text-pink-700" : "bg-white border-pink-100 text-pink-500")}>
+                              ann.fontWeight === 'bold' ? "bg-pink-100 border-pink-300 text-pink-700" : "bg-white border-pink-300 text-pink-500 hover:bg-pink-50")}>
                             <Bold className="w-3.5 h-3.5" />
                           </button>
                           <select value={ann.fontFamily || 'Helvetica'} onChange={(e) => onUpdateAnnotation(ann.id, { fontFamily: e.target.value })} 
-                            className="h-8 text-xs border-2 border-pink-100 rounded-xl bg-white text-pink-900 font-bold px-2 outline-none appearance-none" style={{ colorScheme: 'light' }}>
-                            <optgroup label="☆ PADRÃO PDF ☆" style={{ background: '#fff', color: '#831843' }}>
+                            className="h-8 text-xs border-2 border-pink-200 rounded-xl bg-white text-pink-900 font-bold px-2 outline-none appearance-none" style={{ colorScheme: 'light' }}>
+                            <optgroup label="☆ PADRÃO PDF ☆" style={{ background: '#fff4fb', color: '#831843' }}>
                                 <option value="Helvetica">Helvetica / Arial</option>
                                 <option value="Times New Roman">Times New Roman</option>
                                 <option value="Courier">Courier</option>
                             </optgroup>
-                            <optgroup label="☆ GOOGLE FONTS ☆" style={{ background: '#fff', color: '#831843' }}>
+                            <optgroup label="☆ GOOGLE FONTS ☆" style={{ background: '#fff4fb', color: '#831843' }}>
                                 <option value="Roboto">Roboto</option>
                                 <option value="Montserrat">Montserrat</option>
                                 <option value="Oswald">Oswald</option>
