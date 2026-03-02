@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import type { Annotation, PDFPageData, TextAnnotation } from '@/types/pdf-editor';
+import type { Annotation, PDFPageData, TextAnnotation, DrawAnnotation } from '@/types/pdf-editor';
 
 const GOOGLE_FONTS_URLS: Record<string, { regular: string; bold: string }> = {
   'Roboto': {
@@ -93,14 +93,10 @@ export async function exportPDF(
         const textAnn = ann as TextAnnotation;
         const fontGroup = fonts[textAnn.fontFamily || 'Helvetica'] || fonts['Helvetica'];
         const selectedFont = textAnn.fontWeight === 'bold' ? fontGroup.bold : fontGroup.regular;
-
         const lines = textAnn.text.split('\n');
         const lineHeight = textAnn.fontSize * 1.1;
-
-        // Medição segura da largura
         const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), "");
         const measuredWidth = selectedFont.widthOfTextAtSize(longestLine || " ", textAnn.fontSize);
-        
         const rectWidth = textAnn.width || measuredWidth;
         const rectHeight = textAnn.height || (lines.length * lineHeight);
 
@@ -144,12 +140,15 @@ export async function exportPDF(
         } catch (e) { console.error("Erro na imagem:", e); }
       }
       else if (ann.type === 'draw' && ann.paths.length > 1) {
-        for (let i = 1; i < ann.paths.length; i++) {
+        const drawAnn = ann as DrawAnnotation;
+        for (let i = 1; i < drawAnn.paths.length; i++) {
           page.drawLine({
-            start: { x: ann.paths[i - 1].x, y: height - ann.paths[i - 1].y },
-            end: { x: ann.paths[i].x, y: height - ann.paths[i].y },
-            thickness: ann.lineWidth || 2,
-            color: hexToRgb(ann.color),
+            start: { x: drawAnn.paths[i - 1].x, y: height - drawAnn.paths[i - 1].y },
+            end: { x: drawAnn.paths[i].x, y: height - drawAnn.paths[i].y },
+            thickness: drawAnn.lineWidth || 2,
+            color: hexToRgb(drawAnn.color),
+            // ✨ CORREÇÃO: lineCap arredonda as pontas e lineJoin suaviza as curvas ✨
+            lineCap: 1,
           });
         }
       }
