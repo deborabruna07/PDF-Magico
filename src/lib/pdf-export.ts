@@ -72,7 +72,7 @@ export async function exportPDF(
           regular: await pdfDoc.embedFont(regBytes),
           bold: await pdfDoc.embedFont(boldBytes)
         };
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Erro ao carregar fonte:", e); }
     }
   }
 
@@ -95,37 +95,38 @@ export async function exportPDF(
         const selectedFont = textAnn.fontWeight === 'bold' ? fontGroup.bold : fontGroup.regular;
 
         const lines = textAnn.text.split('\n');
-        const lineHeight = textAnn.fontSize * 1.2;
+        const lineHeight = textAnn.fontSize * 1.1;
+
+        // Medição segura da largura
+        const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), "");
+        const measuredWidth = selectedFont.widthOfTextAtSize(longestLine || " ", textAnn.fontSize);
         
-        // ✨ AJUSTE FINAL DE ALINHAMENTO (Eixo Y) ✨
-        // Adicionamos +4 pixels para compensar o "levemente alto" que você notou
-        const yOffset = 4;
+        const rectWidth = textAnn.width || measuredWidth;
+        const rectHeight = textAnn.height || (lines.length * lineHeight);
 
         if (textAnn.backgroundColor) {
           page.drawRectangle({
             x: textAnn.x,
-            // Subtraímos o offset para descer o retângulo
-            y: height - textAnn.y - (textAnn.height || 30) - yOffset,
-            width: textAnn.width || 100,
-            height: textAnn.height || 30,
+            y: height - textAnn.y - rectHeight,
+            width: rectWidth,
+            height: rectHeight,
             color: hexToRgb(textAnn.backgroundColor),
             rotate: degrees(rotationAngle)
           });
         }
 
-        if (textAnn.text && textAnn.text.trim()) {
-          lines.forEach((line, index) => {
+        lines.forEach((line, index) => {
+          if (line || line === "") {
             page.drawText(line, {
-              x: textAnn.x + 4,
-              // Subtraímos o offset para descer o texto junto com o corretivo
-              y: height - textAnn.y - textAnn.fontSize - (index * lineHeight) - yOffset,
+              x: textAnn.x, 
+              y: height - textAnn.y - textAnn.fontSize - (index * lineHeight),
               size: textAnn.fontSize,
               font: selectedFont,
               color: hexToRgb(textAnn.color),
               rotate: degrees(rotationAngle)
             });
-          });
-        }
+          }
+        });
       } 
       else if (ann.type === 'image') {
         try {
@@ -140,7 +141,7 @@ export async function exportPDF(
             height: ann.height,
             rotate: degrees(rotationAngle)
           });
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Erro na imagem:", e); }
       }
       else if (ann.type === 'draw' && ann.paths.length > 1) {
         for (let i = 1; i < ann.paths.length; i++) {

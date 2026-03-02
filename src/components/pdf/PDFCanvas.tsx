@@ -145,7 +145,8 @@ export function PDFCanvas({
                 onAddAnnotation({
                   id, type: 'text', pageIndex, x: pos.x, y: pos.y, text: '', fontSize: 16, color: '#4c1d95', 
                   backgroundColor: activeTool === 'edit-text' ? '#ffffff' : undefined,
-                  fontFamily: 'Helvetica', rotation: 0, fontWeight: 'normal'
+                  fontFamily: 'Helvetica', rotation: 0, fontWeight: 'normal',
+                  width: 120, height: 30
                 });
                 setEditingText(id);
             } else if (activeTool === 'image') {
@@ -176,9 +177,6 @@ export function PDFCanvas({
                 <polyline points={d.paths.map((p) => `${p.x * scale},${p.y * scale}`).join(' ')} fill="none" stroke={d.color} strokeWidth={d.lineWidth || 3} strokeLinecap="round" strokeLinejoin="round" />
               </g>
             ))}
-            {drawing && currentPath.length > 1 && (
-              <polyline points={currentPath.map((p) => `${p.x * scale},${p.y * scale}`).join(' ')} fill="none" stroke={activeTool === 'sign' ? '#f472b6' : drawColor} strokeWidth={activeTool === 'sign' ? 2 : drawWidth} strokeLinecap="round" strokeLinejoin="round" />
-            )}
           </svg>
 
           {annotations.filter((a): a is ImageAnnotation | TextAnnotation => (a.type === 'image' || a.type === 'text') && a.pageIndex === pageIndex).map((ann) => {
@@ -222,7 +220,6 @@ export function PDFCanvas({
                     >
                       {ann.type === 'text' && (
                         <div className="flex items-center gap-2 border-r border-pink-100 pr-2 mr-1">
-                          
                           <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-pink-200 shadow-sm hover:scale-110 transition-transform flex items-center justify-center bg-white relative">
                             <input 
                               type="color" 
@@ -233,7 +230,6 @@ export function PDFCanvas({
                             />
                           </div>
 
-                          {/* ✨ AJUSTE: Número suavizado e sem negrito ✨ */}
                           <input 
                             type="number" 
                             min="8" 
@@ -241,7 +237,6 @@ export function PDFCanvas({
                             value={ann.fontSize} 
                             onChange={(e) => onUpdateAnnotation(ann.id, { fontSize: parseInt(e.target.value) })}
                             className="w-11 h-7 text-[13px] font-medium border-pink-200 text-pink-700 border-2 border-pink-100 rounded-full text-center outline-none focus:border-pink-300 transition-all bg-white"
-                            title="Tamanho da fonte"
                           />
                           
                           <button onClick={() => onUpdateAnnotation(ann.id, { fontWeight: ann.fontWeight === 'bold' ? 'normal' : 'bold' })}
@@ -250,13 +245,13 @@ export function PDFCanvas({
                             <Bold className="w-3.5 h-3.5" />
                           </button>
                           <select value={ann.fontFamily || 'Helvetica'} onChange={(e) => onUpdateAnnotation(ann.id, { fontFamily: e.target.value })} 
-                            className="h-8 text-xs border-2 border-pink-200 rounded-xl bg-white text-pink-900 font-bold px-2 outline-none appearance-none" style={{ colorScheme: 'light' }}>
-                            <optgroup label="☆ PADRÃO PDF ☆" style={{ background: '#fff4fb', color: '#831843' }}>
+                            className="h-8 text-xs border-2 border-pink-200 rounded-xl bg-white text-pink-900 font-bold px-2 outline-none appearance-none">
+                            <optgroup label="☆ PADRÃO PDF ☆">
                                 <option value="Helvetica">Helvetica / Arial</option>
                                 <option value="Times New Roman">Times New Roman</option>
                                 <option value="Courier">Courier</option>
                             </optgroup>
-                            <optgroup label="☆ GOOGLE FONTS ☆" style={{ background: '#fff4fb', color: '#831843' }}>
+                            <optgroup label="☆ GOOGLE FONTS ☆">
                                 <option value="Roboto">Roboto</option>
                                 <option value="Montserrat">Montserrat</option>
                                 <option value="Oswald">Oswald</option>
@@ -289,16 +284,42 @@ export function PDFCanvas({
                     {editingText === ann.id ? (
                       <textarea value={ann.text} onChange={(e) => onUpdateAnnotation(ann.id, { text: e.target.value }, true)} 
                         onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
-                        onMouseUp={(e) => { e.stopPropagation(); const target = e.target as HTMLTextAreaElement; if (target.offsetWidth && target.offsetHeight) onUpdateAnnotation(ann.id, { width: target.offsetWidth / scale, height: target.offsetHeight / scale }); }}
-                        className={cn("rounded-xl px-2 py-1 outline-none block backdrop-blur-sm transition-all border-2 font-medium", ann.backgroundColor ? "border-pink-500 bg-white shadow-lg" : "border-pink-400 bg-white/90 shadow-md")}
-                        style={{ resize: 'both', fontSize: ann.fontSize * scale, fontFamily: ann.fontFamily || 'Helvetica', fontWeight: ann.fontWeight || 'normal', color: ann.color, width: ann.width ? `${ann.width * scale}px` : '120px', height: ann.height ? `${ann.height * scale}px` : '30px' }} 
+                        onMouseUp={(e) => { 
+                          e.stopPropagation(); 
+                          const target = e.target as HTMLTextAreaElement; 
+                          if (target.offsetWidth && target.offsetHeight) onUpdateAnnotation(ann.id, { width: target.offsetWidth / scale, height: target.offsetHeight / scale }); 
+                        }}
+                        className={cn("rounded-xl px-0 py-0 outline-none block backdrop-blur-sm transition-all border-2 font-medium", ann.backgroundColor ? "border-pink-500 bg-white shadow-lg" : "border-pink-400 bg-white/90 shadow-md")}
+                        style={{ 
+                          resize: 'both', 
+                          whiteSpace: 'pre', 
+                          overflow: 'hidden', 
+                          fontSize: ann.fontSize * scale, 
+                          fontFamily: ann.fontFamily || 'Helvetica', 
+                          fontWeight: ann.fontWeight || 'normal', 
+                          color: ann.color, 
+                          // ✨ CORREÇÃO: Aplica a largura e altura salvas no modo de edição ✨
+                          width: ann.width ? `${ann.width * scale}px` : '120px', 
+                          height: ann.height ? `${ann.height * scale}px` : '30px',
+                          lineHeight: '1.1' 
+                        }} 
                         autoFocus onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setEditingText(null); } }} 
                       />
                     ) : (
-                      <div className={cn("whitespace-pre-wrap block px-2 py-1 transition-all rounded-xl border-2 font-medium", activeTool === 'select' ? "cursor-move" : "cursor-text",
+                      <div className={cn("whitespace-pre block px-0 py-0 transition-all rounded-xl border-2 font-medium", activeTool === 'select' ? "cursor-move" : "cursor-text",
                           ann.backgroundColor ? (selectedElement === ann.id && activeTool === 'select' ? "bg-white border-pink-500 border-dashed shadow-md" : "bg-white border-transparent") : (selectedElement === ann.id && activeTool === 'select' ? "border-pink-500 border-dashed bg-pink-400/20" : "border-transparent hover:border-pink-400 hover:bg-pink-50/50")
                         )} 
-                        style={{ fontSize: ann.fontSize * scale, color: ann.color, fontFamily: ann.fontFamily || 'Helvetica', fontWeight: ann.fontWeight || 'normal', width: ann.width ? `${ann.width * scale}px` : 'auto', minWidth: ann.backgroundColor ? '40px' : 'auto', minHeight: ann.backgroundColor ? '20px' : 'auto' }} 
+                        style={{ 
+                          whiteSpace: 'pre',
+                          fontSize: ann.fontSize * scale, 
+                          color: ann.color, 
+                          fontFamily: ann.fontFamily || 'Helvetica', 
+                          fontWeight: ann.fontWeight || 'normal', 
+                          // ✨ CORREÇÃO: Aplica a largura e altura salvas na visualização ✨
+                          width: ann.width ? `${ann.width * scale}px` : 'fit-content', 
+                          height: ann.height ? `${ann.height * scale}px` : 'auto',
+                          lineHeight: '1.1' 
+                        }} 
                         onClick={(e) => { e.stopPropagation(); if (activeTool !== 'select') { setEditingText(ann.id); setSelectedElement(null); } else { setSelectedElement(ann.id); } }} >
                         {ann.text || (ann.backgroundColor ? '' : (activeTool === 'select' ? '' : 'Clique para digitar'))}
                       </div>
