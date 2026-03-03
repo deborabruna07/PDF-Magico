@@ -10,7 +10,7 @@ import { CursorSelection } from './CursorSelection';
 
 export function PDFEditor() {
   const [selectedCursor, setSelectedCursor] = useState<string | null>(null);
-  const [showClearConfirm, setShowClearConfirm] = useState(false); // ✨ Estado centralizado
+  const [showClearConfirm, setShowClearConfirm] = useState(false); 
 
   const {
     pdfDoc, pdfBytes, fileName, pages, activePages, currentPage, setCurrentPage,
@@ -28,25 +28,37 @@ export function PDFEditor() {
   useLayoutEffect(() => {
     if (!selectedCursor) return;
     const safeUrl = encodeURI(selectedCursor);
-    const styleId = 'cat-paw-style';
-    const oldStyle = document.getElementById(styleId);
-    if (oldStyle) oldStyle.remove();
+    
+    // Tag Link no Head para garantir a prioridade máxima de rede
+    const preloadId = 'cursor-preload-link';
+    let preloadLink = document.getElementById(preloadId) as HTMLLinkElement;
+    if (!preloadLink) {
+      preloadLink = document.createElement('link');
+      preloadLink.id = preloadId;
+      preloadLink.rel = 'preload';
+      preloadLink.as = 'image';
+      preloadLink.href = safeUrl;
+      document.head.appendChild(preloadLink);
+    }
 
-    const style = document.createElement('style');
-    style.id = styleId;
+    const styleId = 'cat-paw-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement;
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    
+    // Aplicação forçada do cursor em absolutamente tudo
     style.innerHTML = `
-      *, html, body { cursor: url('${safeUrl}') 16 16, auto !important; }
+      * { cursor: url('${safeUrl}') 16 16, auto !important; }
       a, button, [role="button"], input, select, textarea, .cursor-pointer, .cursor-text, .cursor-crosshair {
         cursor: url('${safeUrl}') 16 16, pointer !important;
       }
     `;
-    document.head.appendChild(style);
-    const img = new Image();
-    img.src = safeUrl;
 
     return () => {
-      const styleToRemove = document.getElementById(styleId);
-      if (styleToRemove) styleToRemove.remove();
+      // Deixamos os estilos injetados de propósito para não causar delay em re-renderizações rápidas
     };
   }, [selectedCursor]);
 
@@ -71,10 +83,14 @@ export function PDFEditor() {
     }
   }, [pdfBytes, pages, annotations, fileName]);
 
+  // Bloqueio inicial se não tiver cursor
   if (!selectedCursor) return <CursorSelection onSelect={setSelectedCursor} />;
 
+  // Definição do conteúdo principal a ser renderizado baseado no estado
+  let renderContent = null;
+
   if (loading) {
-    return (
+    renderContent = (
       <div key="loading-screen" className="contents">
         <div className="flex min-h-screen items-center justify-center bg-background relative overflow-hidden"
              style={{ backgroundImage: 'radial-gradient(#fbcfe8 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
@@ -85,107 +101,134 @@ export function PDFEditor() {
         </div>
       </div>
     );
-  }
-
-  if (!pdfDoc) {
-    return (
+  } else if (!pdfDoc) {
+    renderContent = (
       <div key="upload-screen" className="contents">
         <UploadScreen onFileSelect={loadPDF} />
       </div>
     );
-  }
+  } else {
+    const isCurrentRemoved = pages.find((p) => p.pageIndex === currentPage)?.removed;
+    const displayPage = isCurrentRemoved ? activePages[0]?.pageIndex ?? 0 : currentPage;
 
-  const isCurrentRemoved = pages.find((p) => p.pageIndex === currentPage)?.removed;
-  const displayPage = isCurrentRemoved ? activePages[0]?.pageIndex ?? 0 : currentPage;
-
-  return (
-    <div key="main-editor-screen" className="contents">
-      {/* ✨ POPUP DEFINITIVO: Agora flutua sobre TUDO, sem cortes ✨ */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-pink-100 max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200 glow-pink">
-            <div className="flex flex-col items-center text-center">
-              <div className="p-3 bg-red-50 text-red-500 rounded-full mb-4 animate-bounce">
-                <AlertTriangle className="w-8 h-8" />
+    renderContent = (
+      <div key="main-editor-screen" className="contents">
+        {showClearConfirm && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-pink-100 max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200 glow-pink">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-3 bg-red-50 text-red-500 rounded-full mb-4 animate-bounce">
+                  <AlertTriangle className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-pink-900 mb-2">Tem certeza? 🌸</h3>
+                <p className="text-sm text-pink-600/80 mb-8 leading-relaxed font-medium">
+                  Esta ação irá apagar definitivamente <strong className="text-pink-700">todas</strong> as suas anotações. Esta ação não pode ser desfeita.
+                </p>
+                <div className="flex gap-3 w-full">
+                  <button 
+                    onClick={() => setShowClearConfirm(false)} 
+                    className="flex-1 py-3 text-sm font-bold rounded-2xl border-2 border-pink-100 text-pink-400 hover:bg-pink-50 transition-all active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={() => {
+                      clearAnnotations();
+                      setShowClearConfirm(false);
+                    }} 
+                    className="flex-1 py-3 text-sm font-bold rounded-2xl bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-200 transition-all active:scale-95"
+                  >
+                    Sim, limpar
+                  </button>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-pink-900 mb-2">Tem certeza? 🌸</h3>
-              <p className="text-sm text-pink-600/80 mb-8 leading-relaxed font-medium">
-                Esta ação irá apagar definitivamente <strong className="text-pink-700">todas</strong> as suas anotações. Esta ação não pode ser desfeita.
-              </p>
-              <div className="flex gap-3 w-full">
-                <button 
-                  onClick={() => setShowClearConfirm(false)} 
-                  className="flex-1 py-3 text-sm font-bold rounded-2xl border-2 border-pink-100 text-pink-400 hover:bg-pink-50 transition-all active:scale-95"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={() => {
-                    clearAnnotations();
-                    setShowClearConfirm(false);
-                  }} 
-                  className="flex-1 py-3 text-sm font-bold rounded-2xl bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-200 transition-all active:scale-95"
-                >
-                  Sim, limpar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex h-screen flex-col relative overflow-hidden bg-rose-50/30"
-           style={{ backgroundImage: 'radial-gradient(#fbcfe8 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
-        <div className="relative z-20 bg-white/70 backdrop-blur-md border-b border-pink-100 shadow-[0_4px_20px_rgb(244,114,182,0.05)]">
-          <Toolbar
-            activeTool={activeTool} onToolChange={setActiveTool} onDownload={handleDownload}
-            hasAnnotations={annotations.length > 0}
-            drawColor={drawColor} onDrawColorChange={setDrawColor}
-            drawWidth={drawWidth} onDrawWidthChange={setDrawWidth}
-            zoom={userZoom} onZoomIn={() => setUserZoom(z => z + 0.25)} onZoomOut={() => setUserZoom(z => Math.max(0.5, z - 0.25))}
-            canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo} 
-            onClearAll={() => setShowClearConfirm(true)} // Dispara o modal centralizado
-          />
-        </div>
-        
-        <div className="flex flex-1 overflow-hidden">
-          <div className="z-10 bg-white/50 backdrop-blur-sm border-r border-pink-100 shadow-[4px_0_24px_rgb(244,114,182,0.05)] flex flex-col w-64 shrink-0">
-            <PageThumbnails pdfDoc={pdfDoc} pages={pages} currentPage={displayPage} onPageSelect={setCurrentPage} onRemovePage={removePage} onRestorePage={restorePage} onRotatePage={rotatePage} />
-          </div>
-          <PDFCanvas
-            pdfDoc={pdfDoc} pageIndex={displayPage} activeTool={activeTool} 
-            annotations={annotations} onAddAnnotation={addAnnotation} 
-            onRemoveAnnotation={removeAnnotation} onUpdateAnnotation={updateAnnotation}
-            drawColor={drawColor} drawWidth={drawWidth} userZoom={userZoom}
-          />
-        </div>
-
-        {exportState !== 'idle' && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-pink-50/40 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white/90 backdrop-blur-xl p-8 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(244,114,182,0.4)] flex flex-col items-center max-w-sm w-full mx-4 border-2 border-pink-100 animate-in zoom-in-95 duration-500 glow-pink">
-              {exportState === 'exporting' ? (
-                <>
-                  <div className="relative flex items-center justify-center w-20 h-20 mb-6">
-                    <div className="absolute inset-0 border-4 border-pink-100 rounded-full"></div>
-                    <div className="absolute inset-0 border-4 border-pink-400 rounded-full border-t-transparent animate-spin"></div>
-                    <FileDown className="w-8 h-8 text-pink-400" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2 text-pink-900 text-glow">Finalizando...</h3>
-                  <p className="text-sm text-pink-600/80 text-center font-medium">Deixando as suas edições perfeitas!</p>
-                </>
-              ) : (
-                <>
-                  <div className="w-20 h-20 mb-6 flex items-center justify-center bg-gradient-to-tr from-pink-200 to-pink-100 rounded-full text-pink-500 shadow-inner scale-110 transition-transform duration-500">
-                    <CheckCircle className="w-10 h-10 drop-shadow-sm" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2 text-center text-pink-900 text-glow">Tudo Prontinho! ✨</h3>
-                  <p className="text-sm text-pink-600/80 text-center font-medium">O seu PDF lindo e editado começou a baixar.</p>
-                </>
-              )}
             </div>
           </div>
         )}
+
+        <div className="flex h-screen flex-col relative overflow-hidden bg-rose-50/30"
+             style={{ backgroundImage: 'radial-gradient(#fbcfe8 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }}>
+          <div className="relative z-20 bg-white/70 backdrop-blur-md border-b border-pink-100 shadow-[0_4px_20px_rgb(244,114,182,0.05)]">
+            <Toolbar
+              activeTool={activeTool} onToolChange={setActiveTool} onDownload={handleDownload}
+              hasAnnotations={annotations.length > 0}
+              drawColor={drawColor} onDrawColorChange={setDrawColor}
+              drawWidth={drawWidth} onDrawWidthChange={setDrawWidth}
+              zoom={userZoom} onZoomIn={() => setUserZoom(z => z + 0.25)} onZoomOut={() => setUserZoom(z => Math.max(0.5, z - 0.25))}
+              canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo} 
+              onClearAll={() => setShowClearConfirm(true)} 
+            />
+          </div>
+          
+          <div className="flex flex-1 overflow-hidden relative">
+            <div className="z-10 bg-white/50 backdrop-blur-sm border-r border-pink-100 shadow-[4px_0_24px_rgb(244,114,182,0.05)] flex flex-col w-64 shrink-0 relative">
+              <PageThumbnails pdfDoc={pdfDoc} pages={pages} currentPage={displayPage} onPageSelect={setCurrentPage} onRemovePage={removePage} onRestorePage={restorePage} onRotatePage={rotatePage} />
+            </div>
+
+            {/* ✨ GATINHOS REPOSICIONADOS: Fora da coluna lateral, sobrepostos no canvas (left-[260px] garante que iniciam logo a seguir à coluna branca) ✨ */}
+          <div className="absolute left-[238px] ml-4 top-1/2 -translate-y-1/2 z-[60] pointer-events-none opacity-100 transition-all">
+            <img 
+              src="/gatitos.png" 
+              alt="Gatinhos Espiando" 
+              className="w-[200px] h-auto drop-shadow-[0_10px_15px_rgba(244,114,182,0.3)] animate-in fade-in slide-in-from-left-8 duration-700" 
+            />
+          </div>
+          <div className="absolute right-[10px] top-2/3 -translate-y-1/2 z-[60] pointer-events-none opacity-100 transition-all">
+        <img 
+          src="/gatito-branco.png" 
+          alt="Gatinhos Espiando no Lado Direito" 
+          className="w-[148px] h-auto drop-shadow-lg"
+        />
       </div>
-    </div>
+
+            <PDFCanvas
+              pdfDoc={pdfDoc} pageIndex={displayPage} activeTool={activeTool} 
+              annotations={annotations} onAddAnnotation={addAnnotation} 
+              onRemoveAnnotation={removeAnnotation} onUpdateAnnotation={updateAnnotation}
+              drawColor={drawColor} drawWidth={drawWidth} userZoom={userZoom}
+            />
+          </div>
+
+          {exportState !== 'idle' && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-pink-50/40 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-white/90 backdrop-blur-xl p-8 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(244,114,182,0.4)] flex flex-col items-center max-w-sm w-full mx-4 border-2 border-pink-100 animate-in zoom-in-95 duration-500 glow-pink">
+                {exportState === 'exporting' ? (
+                  <>
+                    <div className="relative flex items-center justify-center w-20 h-20 mb-6">
+                      <div className="absolute inset-0 border-4 border-pink-100 rounded-full"></div>
+                      <div className="absolute inset-0 border-4 border-pink-400 rounded-full border-t-transparent animate-spin"></div>
+                      <FileDown className="w-8 h-8 text-pink-400" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2 text-pink-900 text-glow">Finalizando...</h3>
+                    <p className="text-sm text-pink-600/80 text-center font-medium">Deixando as suas edições perfeitas!</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-20 h-20 mb-6 flex items-center justify-center bg-gradient-to-tr from-pink-200 to-pink-100 rounded-full text-pink-500 shadow-inner scale-110 transition-transform duration-500">
+                      <CheckCircle className="w-10 h-10 drop-shadow-sm" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2 text-center text-pink-900 text-glow">Tudo Prontinho! ✨</h3>
+                    <p className="text-sm text-pink-600/80 text-center font-medium">O seu PDF lindo e editado começou a baixar.</p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ✨ O SEGREDO DO ZERO DELAY ESTÁ AQUI: ✨
+  // Independente da tela atual (loading, upload ou canvas), a imagem da patinha 
+  // é renderizada de forma invisível. Isso amarra a imagem na memória GPU do navegador!
+  return (
+    <>
+      <div aria-hidden="true" style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none', zIndex: -999 }}>
+        <img src={selectedCursor} alt="Preload Cursor" style={{ width: '100%', height: '100%' }} />
+      </div>
+
+      {renderContent}
+    </>
   );
 }

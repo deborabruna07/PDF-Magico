@@ -1,4 +1,4 @@
-import { MousePointer2, Type, Pencil, Image, Download, Undo, Redo, ZoomIn, ZoomOut, Trash2, FileEdit } from 'lucide-react';
+import { MousePointer2, Type, Pencil, Eraser, Image, Download, Undo, Redo, ZoomIn, ZoomOut, Trash2, FileEdit } from 'lucide-react';
 import type { Tool } from '@/types/pdf-editor';
 import { cn } from '@/lib/utils';
 
@@ -45,12 +45,28 @@ export function Toolbar({
           </button>
         ))}
         
-        {activeTool === 'draw' && onDrawColorChange && onDrawWidthChange && (
-          <div className="flex items-center gap-2 ml-2 pl-2 border-l border-border animate-in fade-in zoom-in duration-200">
-            <input type="color" value={drawColor || '#f472b6'} onChange={(e) => onDrawColorChange(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0 hover:scale-105 transition-transform" title="Cor do Traço" />
+        {activeTool === 'draw' && onDrawWidthChange && (
+          <div className="flex items-center gap-2 ml-2 pl-2 border-l border-border">
+            {/* Botão de alternância entre Pincel e Borracha */}
+            <button 
+              onClick={() => onDrawColorChange?.(drawColor === 'eraser' ? '#f472b6' : 'eraser')}
+              className={cn(
+                "p-1.5 rounded-md border transition-colors",
+                drawColor === 'eraser' ? "bg-pink-100 border-pink-300 text-pink-700" : "bg-white border-gray-200 text-gray-500"
+              )}
+              title={drawColor === 'eraser' ? "Usando Borracha" : "Usando Pincel"}
+            >
+              <Eraser className="h-4 w-4" />
+            </button>
+
+            {/* O seletor de cor só aparece se NÃO for borracha */}
+            {drawColor !== 'eraser' && onDrawColorChange && (
+              <input type="color" value={drawColor === 'eraser' ? '#f472b6' : drawColor} onChange={(e) => onDrawColorChange(e.target.value)} className="w-8 h-8 rounded cursor-pointer border-0 p-0" />
+            )}
+            
             <div className="flex flex-col ml-2 w-24">
               <span className="text-[10px] text-muted-foreground leading-none mb-1">Espessura: {drawWidth}px</span>
-              <input type="range" min="1" max="24" value={drawWidth} onChange={(e) => onDrawWidthChange(Number(e.target.value))} className="cursor-pointer" />
+              <input type="range" min="1" max="50" value={drawWidth} onChange={(e) => onDrawWidthChange(Number(e.target.value))} className="cursor-pointer" />
             </div>
           </div>
         )}

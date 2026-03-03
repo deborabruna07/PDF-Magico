@@ -141,15 +141,23 @@ export async function exportPDF(
       }
       else if (ann.type === 'draw' && ann.paths.length > 1) {
         const drawAnn = ann as DrawAnnotation;
+        
+        // ✨ CORREÇÃO DA BORRACHA NO PDF FINAL ✨
+        // O código agora verifica se o ponto atual ou anterior foi 'erased'.
+        // Se foi, ele ignora e não desenha a linha nesse pedaço.
         for (let i = 1; i < drawAnn.paths.length; i++) {
-          page.drawLine({
-            start: { x: drawAnn.paths[i - 1].x, y: height - drawAnn.paths[i - 1].y },
-            end: { x: drawAnn.paths[i].x, y: height - drawAnn.paths[i].y },
-            thickness: drawAnn.lineWidth || 2,
-            color: hexToRgb(drawAnn.color),
-            // ✨ CORREÇÃO: lineCap arredonda as pontas e lineJoin suaviza as curvas ✨
-            lineCap: 1,
-          });
+          const currentPoint = drawAnn.paths[i];
+          const prevPoint = drawAnn.paths[i - 1];
+
+          if (!currentPoint.erased && !prevPoint.erased) {
+            page.drawLine({
+              start: { x: prevPoint.x, y: height - prevPoint.y },
+              end: { x: currentPoint.x, y: height - currentPoint.y },
+              thickness: drawAnn.lineWidth * 0.75, // ✨ CORREÇÃO DA ESPESSURA: Multiplicador ajusta para visual real da tela
+              color: hexToRgb(drawAnn.color),
+              lineCap: 1,
+            });
+          }
         }
       }
     }
