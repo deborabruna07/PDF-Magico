@@ -177,7 +177,7 @@ export function PDFEditor() {
         <img 
           src="/gatito-branco.png" 
           alt="Gatinhos Espiando no Lado Direito" 
-          className="w-[148px] h-auto drop-shadow-lg"
+          className="w-[148px] h-auto drop-shadow-[0_10px_15px_rgba(244,114,182,0.3)] animate-in fade-in slide-in-from-left-8 duration-700"
         />
       </div>
 
