@@ -1,13 +1,24 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import type { Annotation, PDFPageData, TextAnnotation } from '@/types/pdf-editor';
+import type { Annotation, PDFPageData, TextAnnotation, DrawAnnotation } from '@/types/pdf-editor';
 
-// Mapeamento de fontes do Google Fonts (Links diretos para os arquivos .ttf gratuitos)
-const GOOGLE_FONTS_URLS: Record<string, string> = {
-  'Roboto': 'https://raw.githubusercontent.com/google/fonts/main/ofl/roboto/Roboto-Regular.ttf',
-  'Montserrat': 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Regular.ttf',
-  'Oswald': 'https://raw.githubusercontent.com/google/fonts/main/ofl/oswald/Oswald-Regular.ttf',
-  'Comic Neue': 'https://raw.githubusercontent.com/google/fonts/main/ofl/comicneue/ComicNeue-Regular.ttf'
+const GOOGLE_FONTS_URLS: Record<string, { regular: string; bold: string }> = {
+  'Roboto': {
+    regular: 'https://raw.githubusercontent.com/google/fonts/main/ofl/roboto/Roboto-Regular.ttf',
+    bold: 'https://raw.githubusercontent.com/google/fonts/main/ofl/roboto/Roboto-Bold.ttf'
+  },
+  'Montserrat': {
+    regular: 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Regular.ttf',
+    bold: 'https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Bold.ttf'
+  },
+  'Oswald': {
+    regular: 'https://raw.githubusercontent.com/google/fonts/main/ofl/oswald/Oswald-Regular.ttf',
+    bold: 'https://raw.githubusercontent.com/google/fonts/main/ofl/oswald/Oswald-Bold.ttf'
+  },
+  'Comic Neue': {
+    regular: 'https://raw.githubusercontent.com/google/fonts/main/ofl/comicneue/ComicNeue-Regular.ttf',
+    bold: 'https://raw.githubusercontent.com/google/fonts/main/ofl/comicneue/ComicNeue-Bold.ttf'
+  }
 };
 
 function hexToRgb(hex: string) {
@@ -25,18 +36,23 @@ export async function exportPDF(
 ): Promise<Uint8Array> {
   const srcDoc = await PDFDocument.load(originalBytes);
   const pdfDoc = await PDFDocument.create();
-  
-  // 1. Registrar o FontKit (Necessário para fontes customizadas)
   pdfDoc.registerFontkit(fontkit);
 
-  // 2. Embutir as Fontes Padrão
-  const fonts: Record<string, any> = {
-    'Helvetica': await pdfDoc.embedFont(StandardFonts.Helvetica),
-    'Times New Roman': await pdfDoc.embedFont(StandardFonts.TimesRoman),
-    'Courier': await pdfDoc.embedFont(StandardFonts.Courier),
+  const fonts: Record<string, { regular: any; bold: any }> = {
+    'Helvetica': {
+      regular: await pdfDoc.embedFont(StandardFonts.Helvetica),
+      bold: await pdfDoc.embedFont(StandardFonts.HelveticaBold),
+    },
+    'Times New Roman': {
+      regular: await pdfDoc.embedFont(StandardFonts.TimesRoman),
+      bold: await pdfDoc.embedFont(StandardFonts.TimesRomanBold),
+    },
+    'Courier': {
+      regular: await pdfDoc.embedFont(StandardFonts.Courier),
+      bold: await pdfDoc.embedFont(StandardFonts.CourierBold),
+    },
   };
 
-  // 3. Descobrir quais fontes customizadas o utilizador usou e baixá-las!
   const usedCustomFonts = new Set(
     annotations
       .filter((a): a is TextAnnotation => a.type === 'text')
@@ -47,16 +63,18 @@ export async function exportPDF(
   for (const fontName of usedCustomFonts) {
     if (fontName) {
       try {
-        const url = GOOGLE_FONTS_URLS[fontName];
-        const fontBytes = await fetch(url).then(res => res.arrayBuffer());
-        fonts[fontName] = await pdfDoc.embedFont(fontBytes);
-      } catch (e) {
-        console.error(`Falha ao carregar a fonte ${fontName}`, e);
-      }
+        const urls = GOOGLE_FONTS_URLS[fontName];
+        const [regBytes, boldBytes] = await Promise.all([
+          fetch(urls.regular).then(res => res.arrayBuffer()),
+          fetch(urls.bold).then(res => res.arrayBuffer())
+        ]);
+        fonts[fontName] = {
+          regular: await pdfDoc.embedFont(regBytes),
+          bold: await pdfDoc.embedFont(boldBytes)
+        };
+      } catch (e) { console.error("Erro ao carregar fonte:", e); }
     }
   }
-
-  const getFont = (family?: string) => fonts[family || 'Helvetica'] || fonts['Helvetica'];
 
   const activePages = pages.filter((p) => !p.removed);
 
@@ -64,57 +82,53 @@ export async function exportPDF(
     const [copiedPage] = await pdfDoc.copyPages(srcDoc, [pageData.pageIndex]);
     pdfDoc.addPage(copiedPage);
 
-    const newPageIndex = pdfDoc.getPageCount() - 1;
-    const page = pdfDoc.getPage(newPageIndex);
+    const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
     const { height } = page.getSize();
-
     const pageAnnotations = annotations.filter((a) => a.pageIndex === pageData.pageIndex);
 
     for (const ann of pageAnnotations) {
-      // O ângulo no PDF-lib gira no sentido oposto ao CSS, por isso usamos valor negativo
       const rotationAngle = -(ann.rotation || 0);
 
       if (ann.type === 'text') {
         const textAnn = ann as TextAnnotation;
-        const selectedFont = getFont(textAnn.fontFamily);
+        const fontGroup = fonts[textAnn.fontFamily || 'Helvetica'] || fonts['Helvetica'];
+        const selectedFont = textAnn.fontWeight === 'bold' ? fontGroup.bold : fontGroup.regular;
         const lines = textAnn.text.split('\n');
-        const lineHeight = textAnn.fontSize * 1.2;
-        
-        // Fundo (Corretor)
+        const lineHeight = textAnn.fontSize * 1.1;
+        const longestLine = lines.reduce((a, b) => (a.length > b.length ? a : b), "");
+        const measuredWidth = selectedFont.widthOfTextAtSize(longestLine || " ", textAnn.fontSize);
+        const rectWidth = textAnn.width || measuredWidth;
+        const rectHeight = textAnn.height || (lines.length * lineHeight);
+
         if (textAnn.backgroundColor) {
           page.drawRectangle({
             x: textAnn.x,
-            y: height - textAnn.y - (textAnn.height || 30),
-            width: textAnn.width || 100,
-            height: textAnn.height || 30,
+            y: height - textAnn.y - rectHeight,
+            width: rectWidth,
+            height: rectHeight,
             color: hexToRgb(textAnn.backgroundColor),
             rotate: degrees(rotationAngle)
           });
         }
 
-        // Texto Multilinhas
-        if (textAnn.text && textAnn.text.trim()) {
-          lines.forEach((line, index) => {
+        lines.forEach((line, index) => {
+          if (line || line === "") {
             page.drawText(line, {
-              x: textAnn.x + 2,
+              x: textAnn.x, 
               y: height - textAnn.y - textAnn.fontSize - (index * lineHeight),
               size: textAnn.fontSize,
               font: selectedFont,
               color: hexToRgb(textAnn.color),
               rotate: degrees(rotationAngle)
             });
-          });
-        }
+          }
+        });
       } 
       else if (ann.type === 'image') {
         try {
-          const dataUrl = ann.dataUrl;
-          let image;
-          if (dataUrl.includes('image/png')) {
-            image = await pdfDoc.embedPng(dataUrl);
-          } else {
-            image = await pdfDoc.embedJpg(dataUrl);
-          }
+          const image = ann.dataUrl.includes('image/png') 
+            ? await pdfDoc.embedPng(ann.dataUrl) 
+            : await pdfDoc.embedJpg(ann.dataUrl);
           
           page.drawImage(image, {
             x: ann.x,
@@ -123,18 +137,27 @@ export async function exportPDF(
             height: ann.height,
             rotate: degrees(rotationAngle)
           });
-        } catch (e) {
-          console.error('Failed to embed image:', e);
-        }
+        } catch (e) { console.error("Erro na imagem:", e); }
       }
       else if (ann.type === 'draw' && ann.paths.length > 1) {
-        for (let i = 1; i < ann.paths.length; i++) {
-          page.drawLine({
-            start: { x: ann.paths[i - 1].x, y: height - ann.paths[i - 1].y },
-            end: { x: ann.paths[i].x, y: height - ann.paths[i].y },
-            thickness: ann.lineWidth,
-            color: hexToRgb(ann.color),
-          });
+        const drawAnn = ann as DrawAnnotation;
+        
+        // ✨ CORREÇÃO DA BORRACHA NO PDF FINAL ✨
+        // O código agora verifica se o ponto atual ou anterior foi 'erased'.
+        // Se foi, ele ignora e não desenha a linha nesse pedaço.
+        for (let i = 1; i < drawAnn.paths.length; i++) {
+          const currentPoint = drawAnn.paths[i];
+          const prevPoint = drawAnn.paths[i - 1];
+
+          if (!currentPoint.erased && !prevPoint.erased) {
+            page.drawLine({
+              start: { x: prevPoint.x, y: height - prevPoint.y },
+              end: { x: currentPoint.x, y: height - currentPoint.y },
+              thickness: drawAnn.lineWidth * 0.75, // ✨ CORREÇÃO DA ESPESSURA: Multiplicador ajusta para visual real da tela
+              color: hexToRgb(drawAnn.color),
+              lineCap: 1,
+            });
+          }
         }
       }
     }

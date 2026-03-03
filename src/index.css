@@ -2,98 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+/* ✨ Adicionado importação das fontes para o menu funcionar corretamente */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Comic+Neue:wght@400;700&display=swap');
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 10%;
-
+    --background: 340 100% 99%;
+    --foreground: 340 10% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
-
+    --card-foreground: 340 10% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
-
-    --primary: 217 91% 55%;
+    --popover-foreground: 340 10% 20%;
+    --primary: 330 80% 70%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 220 25% 20%;
-
-    --muted: 220 14% 94%;
-    --muted-foreground: 220 10% 46%;
-
-    --accent: 217 91% 55%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 14% 88%;
-    --input: 220 14% 88%;
-    --ring: 217 91% 55%;
-
-    --radius: 0.625rem;
-
-    --sidebar-bg: 222 30% 14%;
-    --sidebar-fg: 220 14% 80%;
-    --sidebar-fg-active: 0 0% 100%;
-    --sidebar-hover: 222 25% 20%;
-    --sidebar-border: 222 25% 22%;
-    --sidebar-accent: 217 91% 55%;
-
-    --canvas-bg: 220 14% 92%;
-    --canvas-page: 0 0% 100%;
-    --canvas-shadow: 220 25% 10%;
-
-    --toolbar-bg: 0 0% 100%;
-    --toolbar-border: 220 14% 88%;
-
-    --success: 152 60% 42%;
-    --success-foreground: 0 0% 100%;
-
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-
-    --sidebar-background: 222 30% 14%;
-    --sidebar-foreground: 220 14% 80%;
-    --sidebar-primary: 217 91% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 25% 20%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 222 25% 22%;
-    --sidebar-ring: 217 91% 55%;
+    --secondary: 340 30% 90%; 
+    --secondary-foreground: 340 10% 20%;
+    --muted: 340 30% 95%;
+    --muted-foreground: 340 10% 40%;
+    --accent: 340 50% 90%;
+    --accent-foreground: 340 10% 20%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 340 20% 90%;
+    --input: 340 20% 90%;
+    --ring: 330 80% 70%;
+    --radius: 1rem;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
+    /* ✨ Corrigido: Mantendo transição apenas para o que não afeta o cursor */
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform !important;
+  }
+
+  /* ✨ Corrigido: Garante que a patinha "atravesse" elementos do PDF */
+  canvas, .pdf-canvas-container, .absolute {
+    cursor: inherit !important;
+  }
+
+  input, textarea, select, [contenteditable="true"] {
+    cursor: inherit !important;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'DM Sans', sans-serif;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" opacity="0.03"><path d="M8.5 2C7 2 6 3 6 4.5S7 7 8.5 7 11 6 11 4.5 10 2 8.5 2zm7 0c-1.5 0-2.5 1-2.5 2.5S14 7 15.5 7s2.5-1 2.5-2.5S17 2 15.5 2zM4.5 5.5C3 5.5 2 6.5 2 8s1 3 2.5 3 2.5-1 2.5-2.5-1-2.5-2.5-2.5zm15 0c-1.5 0-2.5 1-2.5 2.5S18 11 19.5 11 22 10 22 8s-1-2.5-2.5-2.5zM12 10c-3 0-5 2-5 5 0 3 2 6 5 7 3-1 5-4 5-7 0-3-2-5-5-5z" fill="%23ec4899"/></svg>');
+  }
+
+  ::selection {
+    background-color: #fbcfe8 !important;
+    color: #831843 !important;
   }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+    scrollbar-color: hsl(var(--primary) / 0.4) transparent;
   }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
+  .scrollbar-thin::-webkit-scrollbar { width: 10px; height: 10px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 3px;
+    background-color: hsl(var(--primary) / 0.4);
+    border-radius: 999px;
+    border: 3px solid hsl(var(--background));
   }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--primary) / 0.8);
+  }
+
+  .glow-pink {
+    box-shadow: 0 0 15px hsl(var(--primary) / 0.4), 0 0 30px hsl(var(--primary) / 0.1);
+    transition: all 0.3s ease;
+  }
+  .glow-pink:hover {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.6), 0 0 40px hsl(var(--primary) / 0.3);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 12px hsl(var(--primary) / 0.5);
+  }
+
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .hover-wiggle:hover {
+    animation: wiggle 0.4s ease-in-out infinite;
+  }
+
+  /* 🌸 Força a cor rosa no menu suspenso */
+  select {
+    accent-color: #f472b6;
+    color-scheme: light; /* ✨ Força o menu a não ficar cinza escuro */
+  }
+
+  select option {
+    background-color: #fff;
+    color: #831843;
+  }
+
+  /* ✨ Truque do Box-Shadow para pintar a seleção no Chrome/Edge */
+  select option:checked,
+  select option:hover {
+    background-color: #fce7f3 !important;
+    color: #831843 !important;
+    box-shadow: 0 0 10px 100px #fce7f3 inset !important;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
 }
