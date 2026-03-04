@@ -12,15 +12,16 @@ interface PDFCanvasProps {
   onAddAnnotation: (annotation: Annotation) => void;
   onRemoveAnnotation: (id: string) => void;
   onUpdateAnnotation: (id: string, updates: Partial<Annotation>, replaceHistory?: boolean) => void;
+  onSaveHistorySnapshot?: () => void; 
   drawColor?: string;
   drawWidth?: number;
   userZoom?: number;
-  rotation?: number;
+  rotation?: number; // ✨ Propriedade vital para a rotação
 }
 
 export function PDFCanvas({
-  pdfDoc, pageIndex, activeTool, annotations, onAddAnnotation, onRemoveAnnotation, onUpdateAnnotation,
-  drawColor = '#f472b6', drawWidth = 3, userZoom = 1, rotation = 0
+  pdfDoc, pageIndex, activeTool, annotations, onAddAnnotation, onRemoveAnnotation, onUpdateAnnotation, onSaveHistorySnapshot,
+  drawColor = '#f472b6', drawWidth = 3, userZoom = 1, rotation = 0 // ✨ Valor padrão seguro
 }: PDFCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -34,40 +35,55 @@ export function PDFCanvas({
   const [dragInfo, setDragInfo] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
   const [rotatingId, setRotatingId] = useState<string | null>(null);
 
+  const [isRendering, setIsRendering] = useState(true);
+  const hasSavedEraserHistory = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
+    setIsRendering(true); 
+
     (async () => {
-      const page = await pdfDoc.getPage(pageIndex + 1);
-      const baseViewport = page.getViewport({ scale: 1 });
-      const container = canvasRef.current?.closest('.pdf-canvas-container');
-      if (!container || cancelled) return;
+      try {
+        const page = await pdfDoc.getPage(pageIndex + 1);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const container = canvasRef.current?.closest('.pdf-canvas-container');
+        if (!container || cancelled) return;
 
-      const maxWidth = container.clientWidth - 80;
-      const maxHeight = container.clientHeight - 80;
-      const fitScale = Math.min(maxWidth / baseViewport.width, maxHeight / baseViewport.height, 2);
-      const finalScale = fitScale * userZoom;
+        const maxWidth = container.clientWidth - 80;
+        const maxHeight = container.clientHeight - 80;
+        const fitScale = Math.min(maxWidth / baseViewport.width, maxHeight / baseViewport.height, 2);
+        const finalScale = fitScale * userZoom;
 
-      const viewport = page.getViewport({ scale: finalScale });
-      const canvas = canvasRef.current;
-      if (!canvas || cancelled) return;
+        const viewport = page.getViewport({ scale: finalScale });
+        const canvas = canvasRef.current;
+        if (!canvas || cancelled) return;
 
-      // ✨ CORREÇÃO 1: Multiplica a qualidade pela densidade de píxeis do monitor
-      const pixelRatio = window.devicePixelRatio || 1;
-      canvas.width = Math.floor(viewport.width * pixelRatio);
-      canvas.height = Math.floor(viewport.height * pixelRatio);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
+        const pixelRatio = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * pixelRatio);
+        canvas.height = Math.floor(viewport.height * pixelRatio);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
 
-      setCanvasSize({ width: viewport.width, height: viewport.height });
-      setScale(finalScale);
+        setCanvasSize({ width: viewport.width, height: viewport.height });
+        setScale(finalScale);
 
-      const ctx = canvas.getContext('2d')!;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Envia a escala corrigida para o renderizador do PDFJS
-      const transform = pixelRatio !== 1 ? [pixelRatio, 0, 0, pixelRatio, 0, 0] : undefined;
-      await page.render({ canvasContext: ctx, viewport, transform }).promise;
+        const ctx = canvas.getContext('2d')!;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const transform = pixelRatio !== 1 ? [pixelRatio, 0, 0, pixelRatio, 0, 0] : undefined;
+        
+        await page.render({ canvasContext: ctx, viewport, transform }).promise;
+      } catch (error) {
+        console.error("Erro ao renderizar a página do PDF:", error);
+      } finally {
+        if (!cancelled) {
+          setTimeout(() => {
+            if (!cancelled) setIsRendering(false);
+          }, 50);
+        }
+      }
     })();
+
     return () => { cancelled = true; };
   }, [pdfDoc, pageIndex, userZoom]);
 
@@ -76,13 +92,12 @@ export function PDFCanvas({
     if (!overlay) return { x: 0, y: 0 };
     
     const rect = overlay.getBoundingClientRect();
-    
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    
     const dx = e.clientX - cx;
     const dy = e.clientY - cy;
     
+    // Calcula os cliques tendo em conta a rotação atual da folha!
     const angle = (-rotation * Math.PI) / 180;
     const rx = dx * Math.cos(angle) - dy * Math.sin(angle);
     const ry = dx * Math.sin(angle) + dy * Math.cos(angle);
@@ -136,7 +151,13 @@ export function PDFCanvas({
               }
               return p;
             });
-            if (modified) onUpdateAnnotation(a.id, { paths: newPaths }, true);
+            if (modified) {
+              if (!hasSavedEraserHistory.current && onSaveHistorySnapshot) {
+                onSaveHistorySnapshot();
+                hasSavedEraserHistory.current = true;
+              }
+              onUpdateAnnotation(a.id, { paths: newPaths }, true);
+            }
           }
         });
       } else {
@@ -148,7 +169,7 @@ export function PDFCanvas({
         y: pos.y - dragInfo.offsetY
       }, true);
     }
-  }, [drawing, dragInfo, rotatingId, annotations, getRelativePos, onUpdateAnnotation, activeTool, drawColor, drawWidth, pageIndex]);
+  }, [drawing, dragInfo, rotatingId, annotations, getRelativePos, onUpdateAnnotation, onSaveHistorySnapshot, activeTool, drawColor, drawWidth, pageIndex]);
 
   const handleMouseUp = useCallback(() => {
     if (drawing && currentPath.length > 1 && drawColor !== 'eraser') {
@@ -176,6 +197,10 @@ export function PDFCanvas({
       (activeTool === 'draw' || activeTool === 'sign' || drawing) && "select-none"
     )}>
       
+      {isRendering && (
+        <div className="fixed inset-0 z-[100000]" style={{ cursor: 'default' }} />
+      )}
+
       {activeTool === 'image' && (
         <div className="sticky top-4 left-1/2 -translate-x-1/2 mx-auto w-max bg-white/95 backdrop-blur-sm border-2 border-pink-300 text-pink-600 px-6 py-3 rounded-full shadow-[0_10px_40px_-10px_rgba(244,114,182,0.4)] z-[200] flex items-center gap-3 animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-none">
           <span className="text-2xl animate-bounce">≽^•⩊•^≼</span>
@@ -183,7 +208,7 @@ export function PDFCanvas({
         </div>
       )}
 
-      {/* ✨ CORREÇÃO 2: translateZ(0) e backfaceVisibility forçam a aceleração de hardware e removem o blur na rotação */}
+      {/* ✨ O PONTO ONDE A ROTAÇÃO SE TORNA VISUAL (transform: rotate) ✨ */}
       <div className="relative shadow-[0_20px_50px_-12px_rgba(244,114,182,0.15)] rounded-2xl mx-auto transition-all duration-300 mt-4" 
            style={{ 
              width: canvasSize.width, 
@@ -244,6 +269,8 @@ export function PDFCanvas({
             if (activeTool === 'draw' || activeTool === 'sign') {
               e.preventDefault(); 
               setDrawing(true);
+              hasSavedEraserHistory.current = false; 
+              
               const pos = getRelativePos(e);
 
               if (activeTool === 'draw' && drawColor === 'eraser') {
@@ -261,7 +288,13 @@ export function PDFCanvas({
                       }
                       return p;
                     });
-                    if (modified) onUpdateAnnotation(a.id, { paths: newPaths }, true);
+                    if (modified) {
+                      if (!hasSavedEraserHistory.current && onSaveHistorySnapshot) {
+                        onSaveHistorySnapshot();
+                        hasSavedEraserHistory.current = true;
+                      }
+                      onUpdateAnnotation(a.id, { paths: newPaths }, true);
+                    }
                   }
                 });
               } else {

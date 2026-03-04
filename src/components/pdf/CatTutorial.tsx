@@ -12,7 +12,7 @@ const TUTORIAL_STEPS = [
   {
     id: 'intro',
     target: null, 
-    title: 'Bem-vinda(o) ao PDF Mágico! ^. .^₎Ⳋ',
+    title: 'Bem-vinda(o) ao PDF Mágico!（• ˕ •マ',
     text: 'Miau! Eu sou o seu assistente felino. Que tal um tour rápido para aprender a usar todas as minhas ferramentas mágicas?',
     image: '/gatinho-acenando.png'
   },

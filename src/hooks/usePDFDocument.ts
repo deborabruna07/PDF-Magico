@@ -10,7 +10,6 @@ export function usePDFDocument() {
   const [pages, setPages] = useState<PDFPageData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   
-  // NOVO: Sistema de Histórico para Desfazer/Refazer
   const [history, setHistory] = useState<Annotation[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState(0);
   
@@ -31,7 +30,7 @@ export function usePDFDocument() {
       setPdfDoc(doc);
       setPages(Array.from({ length: doc.numPages }, (_, i) => ({ pageIndex: i, removed: false, rotation: 0 })));
       setCurrentPage(0);
-      setHistory([[]]); // Reinicia o histórico ao carregar novo PDF
+      setHistory([[]]); 
       setHistoryIndex(0);
       setActiveTool('select');
     } catch (e) {
@@ -50,6 +49,11 @@ export function usePDFDocument() {
     setHistoryIndex(prev => prev + 1);
   }, [historyIndex]);
 
+  // ✨ NOVO: Guarda uma fotografia do estado exato antes de uma edição contínua (como a borracha)
+  const saveHistorySnapshot = useCallback(() => {
+    pushState([...annotations]);
+  }, [annotations, pushState]);
+
   const removePage = useCallback((pageIndex: number) => {
     setPages((prev) => {
       const updated = prev.map((p) => p.pageIndex === pageIndex ? { ...p, removed: true } : p);
@@ -64,7 +68,6 @@ export function usePDFDocument() {
     setPages((prev) => prev.map((p) => p.pageIndex === pageIndex ? { ...p, removed: false } : p));
   }, []);
 
-  // Rotação de Página
   const rotatePage = useCallback((pageIndex: number) => {
     setPages((prev) =>
       prev.map((p) =>
@@ -79,7 +82,6 @@ export function usePDFDocument() {
     pushState([...annotations, annotation]);
   }, [annotations, pushState]);
 
-  // Adicionámos um parâmetro "replaceHistory" para evitar que cada letra digitada crie um passo no histórico
   const updateAnnotation = useCallback((id: string, updates: Partial<Annotation>, replaceHistory = false) => {
     const newAnnotations = annotations.map((a) => (a.id === id ? ({ ...a, ...updates } as Annotation) : a));
     if (replaceHistory) {
@@ -103,11 +105,10 @@ export function usePDFDocument() {
 
   const activePages = pages.filter((p) => !p.removed);
 
-  // RETURN FINAL CORRIGIDO COM O rotatePage
   return {
     pdfDoc, pdfBytes, fileName, pages, activePages, currentPage, setCurrentPage, annotations,
     activeTool, setActiveTool, loading, loadPDF, removePage, restorePage, rotatePage,
-    addAnnotation, updateAnnotation, removeAnnotation, 
+    addAnnotation, updateAnnotation, removeAnnotation, saveHistorySnapshot, // ✨ Exportado aqui
     undo, redo, canUndo, canRedo, clearAnnotations
   };
 }

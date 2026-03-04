@@ -11,7 +11,7 @@ interface PageThumbnailsProps {
   onPageSelect: (pageIndex: number) => void;
   onRemovePage: (pageIndex: number) => void;
   onRestorePage: (pageIndex: number) => void;
-  onRotatePage: (pageIndex: number) => void; // NOVO
+  onRotatePage: (pageIndex: number) => void;
 }
 
 function Thumbnail({
@@ -54,8 +54,9 @@ function Thumbnail({
     <div
       className={cn(
         'group relative cursor-pointer rounded-xl border-2 transition-all duration-300 overflow-hidden shadow-sm',
-        isActive && !page.removed ? 'border-primary ring-4 ring-primary/10' : 'border-transparent bg-muted/30',
-        page.removed ? 'opacity-50 grayscale' : 'hover:border-primary/50 hover:shadow-md'
+        // ✨ Transformamos as bordas e fundos cinzentos em tons de rosa
+        isActive && !page.removed ? 'border-pink-400 ring-4 ring-pink-400/20' : 'border-transparent bg-pink-50/60',
+        page.removed ? 'opacity-50 grayscale' : 'hover:border-pink-300 hover:shadow-md'
       )}
       onClick={!page.removed ? onClick : undefined}
     >
@@ -67,25 +68,25 @@ function Thumbnail({
         />
       </div>
       
-      {/* Etiqueta da Página mais bonita */}
-      <div className="absolute bottom-2 left-2 rounded-md bg-black/60 backdrop-blur-md px-2 py-1 text-[10px] font-bold text-white shadow-sm">
+      {/* Etiqueta da Página */}
+      <div className="absolute bottom-2 left-2 rounded-md bg-pink-900/60 backdrop-blur-md px-2 py-1 text-[10px] font-bold text-white shadow-sm">
         {page.pageIndex + 1}
       </div>
 
-      {/* Botões Flutuantes (Glassmorphism) */}
+      {/* Botões Flutuantes (Glassmorphism cor-de-rosa) */}
       <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         {!page.removed ? (
           <>
             <button
               onClick={(e) => { e.stopPropagation(); onRotate(); }}
-              className="rounded-full bg-white/90 backdrop-blur shadow-sm p-1.5 text-slate-700 hover:bg-primary hover:text-white transition-colors"
+              className="rounded-full bg-white/90 backdrop-blur shadow-sm p-1.5 text-pink-500 hover:bg-pink-400 hover:text-white transition-colors"
               title="Rodar 90º"
             >
               <RotateCw className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onRemove(); }}
-              className="rounded-full bg-white/90 backdrop-blur shadow-sm p-1.5 text-slate-700 hover:bg-red-500 hover:text-white transition-colors"
+              className="rounded-full bg-white/90 backdrop-blur shadow-sm p-1.5 text-pink-500 hover:bg-red-500 hover:text-white transition-colors"
               title="Remover página"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -94,7 +95,7 @@ function Thumbnail({
         ) : (
           <button
             onClick={(e) => { e.stopPropagation(); onRestore(); }}
-            className="rounded-full bg-green-500/90 backdrop-blur shadow-sm p-1.5 text-white hover:bg-green-600 transition-colors"
+            className="rounded-full bg-pink-500/90 backdrop-blur shadow-sm p-1.5 text-white hover:bg-pink-600 transition-colors"
             title="Restaurar página"
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -109,15 +110,19 @@ export function PageThumbnails({
   pdfDoc, pages, currentPage, onPageSelect, onRemovePage, onRestorePage, onRotatePage
 }: PageThumbnailsProps) {
   return (
-    <div className="flex h-full w-56 flex-col bg-slate-50 border-r border-slate-200 shadow-inner">
-      <div className="px-5 py-4 flex items-center justify-between border-b border-slate-200 bg-white">
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+    // ✨ Fundo geral da coluna agora usa tons rose e bordas pink
+    <div className="flex h-full w-56 flex-col bg-rose-50/40 border-r border-pink-100 shadow-inner">
+      
+      {/* ✨ Cabeçalho da coluna a combinar com a Toolbar */}
+      <div className="px-5 py-4 flex items-center justify-between border-b border-pink-100 bg-white/60 backdrop-blur-sm">
+        <span className="text-xs font-bold uppercase tracking-widest text-pink-600">
           Páginas
         </span>
-        <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-1 rounded-full">
+        <span className="text-xs font-bold bg-pink-100 text-pink-700 px-2.5 py-1 rounded-full shadow-sm">
           {pages.filter(p => !p.removed).length}/{pages.length}
         </span>
       </div>
+
       <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4">
         {pages.map((page) => (
           <Thumbnail
