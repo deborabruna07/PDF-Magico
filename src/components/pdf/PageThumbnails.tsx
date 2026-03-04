@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Trash2, RotateCcw, RotateCw } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import type { PDFPageData } from '@/types/pdf-editor';
+import type { PDFPageData } from '@/types/pdf-edit';
 import { cn } from '@/lib/utils';
 
 interface PageThumbnailsProps {

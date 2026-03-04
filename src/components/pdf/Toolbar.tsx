@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MousePointer2, Type, Pencil, Eraser, Image, Download, Undo, Redo, ZoomIn, ZoomOut, Trash2, FileEdit, HelpCircle } from 'lucide-react';
-import type { Tool } from '@/types/pdf-editor';
+import type { Tool } from '@/types/pdf-edit';
 import { cn } from '@/lib/utils';
 import { CatTutorial } from './CatTutorial';
 

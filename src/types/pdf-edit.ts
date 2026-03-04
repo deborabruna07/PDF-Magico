@@ -8,6 +8,7 @@ export interface TextAnnotation {
   y: number;
   text: string;
   fontSize: number;
+  fontWeight?: string | number;
   color: string;
   backgroundColor?: string;
   width?: number;

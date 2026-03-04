@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { pdfjsLib } from '@/lib/pdf-worker';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import type { Annotation, PDFPageData, Tool } from '@/types/pdf-editor';
+import type { Annotation, PDFPageData, Tool } from '@/types/pdf-edit';
 
 export function usePDFDocument() {
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
