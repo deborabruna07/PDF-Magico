@@ -1,4 +1,3 @@
-```markdown
 # 🐾 PDF Mágico (Editor de PDFs)
 
 Um editor de PDF incrivelmente fofo, rápido e interativo. O **PDF Mágico** permite que você edite, desenhe, adicione imagens e textos aos seus documentos diretamente no navegador, com uma interface amigável guiada por assistentes felinos! ✨
@@ -6,7 +5,7 @@ Um editor de PDF incrivelmente fofo, rápido e interativo. O **PDF Mágico** per
 ## ✨ Funcionalidades Mágicas
 
 * 🖱️ **Patinhas Customizadas (Hardware Cursors):** Escolha o seu gatinho assistente! O sistema utiliza renderização de cursores direto na GPU para zero lag durante o uso.
-* 🔦 **Tutorial Interativo (Spotlight):** Um tour guiado pelos nossos gatinhos assistentes, utilizando um sistema avançado de máscara vetorial (SVG) que ilumina a ferramenta explicada e escurece o restante da tela.
+* 🔦 **Tutorial Interativo (Spotlight):** Um tour guiado por nosso gatinho assistente, utilizando um sistema avançado de máscara vetorial (SVG) que ilumina a ferramenta explicada e escurece o restante da tela.
 * 🪄 **Corretivo Mágico:** Uma ferramenta especial de edição de texto com fundo branco que permite "apagar" partes do PDF original e reescrever por cima.
 * ✍️ **Lápis e Borracha:** Desenhe livremente com controle total de espessura e cores.
 * 🖼️ **Imagens e Figurinhas:** Adicione e redimensione imagens ou figurinhas pelo documento de forma intuitiva.
@@ -19,27 +18,28 @@ Este projeto foi construído com foco em performance e uma UI/UX impecável, uti
 
 * **[React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/):** Base do projeto, garantindo tipagem forte e componentização.
 * **[Vite](https://vitejs.dev/):** Bundler super rápido para desenvolvimento.
-* **[pdf-lib](https://pdf-lib.js.org/) & [pdfjs-dist](https://mozilla.github.io/pdf.js/):** Bibliotecas robustas para renderização, manipulação e exportação de documentos PDF no lado do cliente (sem necessidade de backend).
+* **[pdf-lib](https://pdf-lib.js.org/) & [pdfjs-dist](https://mozilla.github.io/pdf.js/):** Bibliotecas robustas para renderização, manipulação e exportação de documentos PDF no lado do cliente.
 * **[Tailwind CSS](https://tailwindcss.com/):** Estilização ágil com uma paleta de cores customizada (tons de rosa/rose).
 * **[Lucide React](https://lucide.dev/):** Ícones modernos e limpos.
-* **[shadcn/ui](https://ui.shadcn.com/) & [Radix UI](https://www.radix-ui.com/):** Componentes acessíveis e de alta qualidade para a interface.
+* **[shadcn/ui](https://ui.shadcn.com/) & [Radix UI](https://www.radix-ui.com/):** Componentes acessíveis e de alta qualidade.
 
 ## 🚀 Como Rodar o Projeto Localmente
 
-1. Clone este repositório:
-   ```bash
-   git clone [https://github.com/SEU_USUARIO/pdf-magico.git](https://github.com/SEU_USUARIO/pdf-magico.git)
+1. **Clone este repositório:**
+```bash
+git clone https://github.com/SEU_USUARIO/pdf-magico.git
 
 ```
 
-2. Acesse a pasta do projeto:
+
+2. **Acesse a pasta do projeto:**
 ```bash
 cd pdf-magico
 
 ```
 
 
-3. Instale as dependências:
+3. **Instale as dependências:**
 ```bash
 npm install
 # ou yarn install
@@ -47,7 +47,7 @@ npm install
 ```
 
 
-4. Inicie o servidor de desenvolvimento:
+4. **Inicie o servidor de desenvolvimento:**
 ```bash
 npm run dev
 # ou yarn dev
@@ -55,7 +55,7 @@ npm run dev
 ```
 
 
-5. Abra o seu navegador e acesse `http://localhost:5173`.
+5. **Abra o seu navegador e acesse:** `http://localhost:5173`
 
 ---
 
@@ -63,4 +63,4 @@ npm run dev
 Desenvolvido com ❤ e muitos ronrons por <strong>Débora Bruna</strong>.
 </div>
 
-```
+---
