@@ -51,7 +51,7 @@ export function UploadScreen({ onFileSelect }: UploadScreenProps) {
           
           <div className="flex items-center gap-3 mb-4">
             <Sparkles className="w-8 h-8 text-pink-400" />
-            <h1 className="text-4xl font-bold text-pink-500 text-glow">Bem-vinda ao PDF Mágico!</h1>
+            <h1 className="text-4xl font-bold text-pink-500 text-glow">Bem-vindo ao PDF Mágico!</h1>
             <Sparkles className="w-8 h-8 text-pink-400" />
           </div>
           

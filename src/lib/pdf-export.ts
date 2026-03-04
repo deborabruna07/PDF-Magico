@@ -29,6 +29,24 @@ function hexToRgb(hex: string) {
   return rgb(r, g, b);
 }
 
+// ✨ NOVA FUNÇÃO MATEMÁTICA PARA ROTACIONAR PELO CENTRO:
+// O PDFJs rotaciona pelas pontas, o HTML rotaciona pelo centro.
+// Essa função traduz a posição de forma que o elemento fique no mesmo lugar.
+function getRotatedPoint(
+  pointX: number, pointY: number,
+  cx: number, cy: number,
+  angleDegrees: number
+) {
+  const dx = pointX - cx;
+  const dy = pointY - cy;
+  const rad = (angleDegrees * Math.PI) / 180;
+  
+  const newDx = dx * Math.cos(rad) - dy * Math.sin(rad);
+  const newDy = dx * Math.sin(rad) + dy * Math.cos(rad);
+  
+  return { x: cx + newDx, y: cy + newDy };
+}
+
 export async function exportPDF(
   originalBytes: ArrayBuffer,
   pages: PDFPageData[],
@@ -83,6 +101,12 @@ export async function exportPDF(
     pdfDoc.addPage(copiedPage);
 
     const page = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
+    
+    if (pageData.rotation) {
+      const currentRotation = page.getRotation().angle;
+      page.setRotation(degrees((currentRotation + pageData.rotation) % 360));
+    }
+
     const { height } = page.getSize();
     const pageAnnotations = annotations.filter((a) => a.pageIndex === pageData.pageIndex);
 
@@ -100,10 +124,20 @@ export async function exportPDF(
         const rectWidth = textAnn.width || measuredWidth;
         const rectHeight = textAnn.height || (lines.length * lineHeight);
 
+        // ✨ A mágica acontece aqui: encontra o centro real do texto
+        const pdfCx = textAnn.x + rectWidth / 2;
+        const pdfCy = height - textAnn.y - rectHeight / 2;
+
         if (textAnn.backgroundColor) {
+          // Reposiciona o fundo do texto aplicando o giro em torno do centro
+          const rectOrigin = getRotatedPoint(
+            textAnn.x, height - textAnn.y - rectHeight,
+            pdfCx, pdfCy, rotationAngle
+          );
+
           page.drawRectangle({
-            x: textAnn.x,
-            y: height - textAnn.y - rectHeight,
+            x: rectOrigin.x,
+            y: rectOrigin.y,
             width: rectWidth,
             height: rectHeight,
             color: hexToRgb(textAnn.backgroundColor),
@@ -113,9 +147,16 @@ export async function exportPDF(
 
         lines.forEach((line, index) => {
           if (line || line === "") {
+            // Reposiciona cada linha de texto aplicando o giro em torno do centro
+            const lineOrigin = getRotatedPoint(
+              textAnn.x, 
+              height - textAnn.y - textAnn.fontSize - (index * lineHeight),
+              pdfCx, pdfCy, rotationAngle
+            );
+
             page.drawText(line, {
-              x: textAnn.x, 
-              y: height - textAnn.y - textAnn.fontSize - (index * lineHeight),
+              x: lineOrigin.x, 
+              y: lineOrigin.y,
               size: textAnn.fontSize,
               font: selectedFont,
               color: hexToRgb(textAnn.color),
@@ -130,9 +171,18 @@ export async function exportPDF(
             ? await pdfDoc.embedPng(ann.dataUrl) 
             : await pdfDoc.embedJpg(ann.dataUrl);
           
+          const imgPdfCx = ann.x + ann.width / 2;
+          const imgPdfCy = height - ann.y - ann.height / 2;
+          
+          // Reposiciona a imagem aplicando o giro em torno do centro
+          const imgOrigin = getRotatedPoint(
+            ann.x, height - ann.y - ann.height,
+            imgPdfCx, imgPdfCy, rotationAngle
+          );
+          
           page.drawImage(image, {
-            x: ann.x,
-            y: height - ann.y - ann.height,
+            x: imgOrigin.x,
+            y: imgOrigin.y,
             width: ann.width,
             height: ann.height,
             rotate: degrees(rotationAngle)
@@ -142,9 +192,6 @@ export async function exportPDF(
       else if (ann.type === 'draw' && ann.paths.length > 1) {
         const drawAnn = ann as DrawAnnotation;
         
-        // ✨ CORREÇÃO DA BORRACHA NO PDF FINAL ✨
-        // O código agora verifica se o ponto atual ou anterior foi 'erased'.
-        // Se foi, ele ignora e não desenha a linha nesse pedaço.
         for (let i = 1; i < drawAnn.paths.length; i++) {
           const currentPoint = drawAnn.paths[i];
           const prevPoint = drawAnn.paths[i - 1];
@@ -153,7 +200,7 @@ export async function exportPDF(
             page.drawLine({
               start: { x: prevPoint.x, y: height - prevPoint.y },
               end: { x: currentPoint.x, y: height - currentPoint.y },
-              thickness: drawAnn.lineWidth * 0.75, // ✨ CORREÇÃO DA ESPESSURA: Multiplicador ajusta para visual real da tela
+              thickness: drawAnn.lineWidth * 0.75, 
               color: hexToRgb(drawAnn.color),
               lineCap: 1,
             });

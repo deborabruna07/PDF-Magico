@@ -5,12 +5,13 @@ import { Toolbar } from './Toolbar';
 import { PageThumbnails } from './PageThumbnails';
 import { PDFCanvas } from './PDFCanvas';
 import { exportPDF } from '@/lib/pdf-export';
-import { Loader2, FileDown, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, FileDown, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react'; // ✨ Trash2 importado
 import { CursorSelection } from './CursorSelection';
 
 export function PDFEditor() {
   const [selectedCursor, setSelectedCursor] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false); 
+  const [pageToDelete, setPageToDelete] = useState<number | null>(null); // ✨ Estado do modal de exclusão
 
   const {
     pdfDoc, pdfBytes, fileName, pages, activePages, currentPage, setCurrentPage,
@@ -29,7 +30,6 @@ export function PDFEditor() {
     if (!selectedCursor) return;
     const safeUrl = encodeURI(selectedCursor);
     
-    // Tag Link no Head para garantir a prioridade máxima de rede
     const preloadId = 'cursor-preload-link';
     let preloadLink = document.getElementById(preloadId) as HTMLLinkElement;
     if (!preloadLink) {
@@ -49,7 +49,6 @@ export function PDFEditor() {
       document.head.appendChild(style);
     }
     
-    // Aplicação forçada do cursor em absolutamente tudo
     style.innerHTML = `
       * { cursor: url('${safeUrl}') 16 16, auto !important; }
       a, button, [role="button"], input, select, textarea, .cursor-pointer, .cursor-text, .cursor-crosshair {
@@ -57,9 +56,17 @@ export function PDFEditor() {
       }
     `;
 
-    return () => {
-      // Deixamos os estilos injetados de propósito para não causar delay em re-renderizações rápidas
-    };
+    // ✨ Correção 2: Injetando as fontes do Google Fonts no sistema
+    const fontStyleId = 'google-fonts-injection';
+    let fontStyle = document.getElementById(fontStyleId) as HTMLStyleElement;
+    if (!fontStyle) {
+      fontStyle = document.createElement('style');
+      fontStyle.id = fontStyleId;
+      fontStyle.innerHTML = `@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Roboto:wght@400;700&display=swap');`;
+      document.head.appendChild(fontStyle);
+    }
+
+    return () => {};
   }, [selectedCursor]);
 
   const handleDownload = useCallback(async () => {
@@ -83,10 +90,8 @@ export function PDFEditor() {
     }
   }, [pdfBytes, pages, annotations, fileName]);
 
-  // Bloqueio inicial se não tiver cursor
   if (!selectedCursor) return <CursorSelection onSelect={setSelectedCursor} />;
 
-  // Definição do conteúdo principal a ser renderizado baseado no estado
   let renderContent = null;
 
   if (loading) {
@@ -110,9 +115,45 @@ export function PDFEditor() {
   } else {
     const isCurrentRemoved = pages.find((p) => p.pageIndex === currentPage)?.removed;
     const displayPage = isCurrentRemoved ? activePages[0]?.pageIndex ?? 0 : currentPage;
+    const displayRotation = pages.find((p) => p.pageIndex === displayPage)?.rotation || 0;
 
     renderContent = (
       <div key="main-editor-screen" className="contents">
+        
+        {/* ✨ Correção 3: Modal de exclusão de página */}
+        {pageToDelete !== null && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-pink-100 max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200 glow-pink">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-3 bg-red-50 text-red-500 rounded-full mb-4 animate-bounce">
+                  <Trash2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-pink-900 mb-2">Excluir Página? (•˕ •マ</h3>
+                <p className="text-sm text-pink-600/80 mb-8 leading-relaxed font-medium">
+                  Tem certeza que deseja excluir esta página do documento?
+                </p>
+                <div className="flex gap-3 w-full">
+                  <button 
+                    onClick={() => setPageToDelete(null)} 
+                    className="flex-1 py-3 text-sm font-bold rounded-2xl border-2 border-pink-100 text-pink-400 hover:bg-pink-50 transition-all active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={() => {
+                      removePage(pageToDelete);
+                      setPageToDelete(null);
+                    }} 
+                    className="flex-1 py-3 text-sm font-bold rounded-2xl bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-200 transition-all active:scale-95"
+                  >
+                    Sim, excluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showClearConfirm && (
           <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-pink-100 max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200 glow-pink">
@@ -162,10 +203,14 @@ export function PDFEditor() {
           
           <div className="flex flex-1 overflow-hidden relative">
             <div className="z-10 bg-white/50 backdrop-blur-sm border-r border-pink-100 shadow-[4px_0_24px_rgb(244,114,182,0.05)] flex flex-col w-64 shrink-0 relative">
-              <PageThumbnails pdfDoc={pdfDoc} pages={pages} currentPage={displayPage} onPageSelect={setCurrentPage} onRemovePage={removePage} onRestorePage={restorePage} onRotatePage={rotatePage} />
+              <PageThumbnails 
+                pdfDoc={pdfDoc} pages={pages} currentPage={displayPage} 
+                onPageSelect={setCurrentPage} 
+                onRemovePage={setPageToDelete} // ✨ Alterado para abrir o modal
+                onRestorePage={restorePage} onRotatePage={rotatePage} 
+              />
             </div>
 
-            {/* ✨ GATINHOS REPOSICIONADOS: Fora da coluna lateral, sobrepostos no canvas (left-[260px] garante que iniciam logo a seguir à coluna branca) ✨ */}
           <div className="absolute left-[238px] ml-4 top-1/2 -translate-y-1/2 z-[60] pointer-events-none opacity-100 transition-all">
             <img 
               src="/gatitos.png" 
@@ -186,6 +231,7 @@ export function PDFEditor() {
               annotations={annotations} onAddAnnotation={addAnnotation} 
               onRemoveAnnotation={removeAnnotation} onUpdateAnnotation={updateAnnotation}
               drawColor={drawColor} drawWidth={drawWidth} userZoom={userZoom}
+              rotation={displayRotation}
             />
           </div>
 
@@ -219,15 +265,11 @@ export function PDFEditor() {
     );
   }
 
-  // ✨ O SEGREDO DO ZERO DELAY ESTÁ AQUI: ✨
-  // Independente da tela atual (loading, upload ou canvas), a imagem da patinha 
-  // é renderizada de forma invisível. Isso amarra a imagem na memória GPU do navegador!
   return (
     <>
       <div aria-hidden="true" style={{ position: 'fixed', top: '-9999px', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none', zIndex: -999 }}>
         <img src={selectedCursor} alt="Preload Cursor" style={{ width: '100%', height: '100%' }} />
       </div>
-
       {renderContent}
     </>
   );
