@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Trash2, RotateCw, Bold } from 'lucide-react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import type { Annotation, Tool, TextAnnotation, DrawAnnotation, ImageAnnotation } from '@/types/pdf-editor';
+import type { Annotation, Tool, TextAnnotation, DrawAnnotation, ImageAnnotation } from '@/types/pdf-edit';
 import { cn } from '@/lib/utils';
 
 interface PDFCanvasProps {
@@ -295,7 +295,7 @@ export function PDFCanvas({
                               max="72"
                               value={ann.fontSize}
                               onChange={(e) => onUpdateAnnotation(ann.id, { fontSize: parseInt(e.target.value) })}
-                              className="w-11 h-7 text-[13px] font-medium border-pink-200 text-pink-700 border-2 border-pink-100 rounded-full text-center outline-none focus:border-pink-300 transition-all bg-white"
+                              className="w-11 h-7 text-[13px] font-medium border-pink-200 text-pink-700 border-2 rounded-full text-center outline-none focus:border-pink-300 transition-all bg-white"
                             />
                             <button onClick={() => onUpdateAnnotation(ann.id, { fontWeight: ann.fontWeight === 'bold' ? 'normal' : 'bold' })}
                               className={cn("w-7 h-7 flex items-center justify-center rounded-lg border transition-all",
