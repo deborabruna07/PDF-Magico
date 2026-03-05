@@ -1,6 +1,7 @@
+```markdown
 # 🐾 PDF Mágico (Editor de PDFs)
 
-Um editor de PDF incrivelmente fofo, rápido e interativo. O **PDF Mágico** permite que você edite, desenhe, adicione imagens e textos aos seus documentos diretamente no navegador, com uma interface amigável guiada por assistentes felinos! ✨
+Um editor de PDF incrivelmente fofo, rápido e interativo. O **PDF Mágico** permite que você edite, desenhe, adicione imagens e textos aos seus documentos, com uma interface amigável guiada por assistentes felinos! ✨ Agora disponível tanto para web quanto como **Aplicativo de Desktop**! 🖥️
 
 ## ✨ Funcionalidades Mágicas
 
@@ -18,6 +19,7 @@ Este projeto foi construído com foco em performance e uma UI/UX impecável, uti
 
 * **[React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/):** Base do projeto, garantindo tipagem forte e componentização.
 * **[Vite](https://vitejs.dev/):** Bundler super rápido para desenvolvimento.
+* **[Electron](https://www.electronjs.org/) & [electron-builder](https://www.electron.build/):** Utilizados para empacotar a magia da web e transformá-la num executável instalável para Desktop (.exe).
 * **[pdf-lib](https://pdf-lib.js.org/) & [pdfjs-dist](https://mozilla.github.io/pdf.js/):** Bibliotecas robustas para renderização, manipulação e exportação de documentos PDF no lado do cliente.
 * **[Tailwind CSS](https://tailwindcss.com/):** Estilização ágil com uma paleta de cores customizada (tons de rosa/rose).
 * **[Lucide React](https://lucide.dev/):** Ícones modernos e limpos.
@@ -27,35 +29,52 @@ Este projeto foi construído com foco em performance e uma UI/UX impecável, uti
 
 1. **Clone este repositório:**
 ```bash
-git clone https://github.com/SEU_USUARIO/pdf-magico.git
+git clone [https://github.com/SEU_USUARIO/pdf-magico.git](https://github.com/SEU_USUARIO/pdf-magico.git)
 
 ```
 
-
 2. **Acesse a pasta do projeto:**
+
 ```bash
 cd pdf-magico
 
 ```
 
-
 3. **Instale as dependências:**
+
 ```bash
 npm install
-# ou yarn install
 
 ```
 
+4. **Inicie o servidor de desenvolvimento (Versão Web):**
 
-4. **Inicie o servidor de desenvolvimento:**
 ```bash
 npm run dev
-# ou yarn dev
+
+```
+
+*(Abra o seu navegador e acesse: `http://localhost:8080`)*
+
+## 📦 Como Gerar e Testar o Executável (Desktop)
+
+Se quiser rodar o PDF Mágico como um programa de computador independente:
+
+* **Para testar a versão Desktop localmente:**
+```bash
+npm run electron:start
 
 ```
 
 
-5. **Abra o seu navegador e acesse:** `http://localhost:5173`
+* **Para criar o instalador `.exe` (Build final):**
+```bash
+npm run electron:build
+
+```
+
+
+*O seu instalador será gerado dentro da pasta `dist_electron` pronto para ser instalado e usado!*
 
 ---
 

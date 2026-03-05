@@ -14,56 +14,56 @@ const TUTORIAL_STEPS = [
     target: null, 
     title: 'Bem-vinda(o) ao PDF Mágico!（• ˕ •マ',
     text: 'Miau! Eu sou o seu assistente felino. Que tal um tour rápido para aprender a usar todas as minhas ferramentas mágicas?',
-    image: '/gatinho-acenando.png'
+    image: './gatinho-acenando.png'
   },
   {
     id: 'tool-select',
     target: '#btn-tool-select',
     title: 'Ferramenta Selecionar',
     text: 'Use a patinha para mover, redimensionar ou até apagar as anotações que você já fez na página!',
-    image: '/gatinho-apontando.png'
+    image: './gatinho-apontando.png'
   },
   {
     id: 'tool-text',
     target: '#btn-tool-text',
     title: 'Caixa de Texto',
     text: 'Precisa escrever? Selecione esta opção, depois clique em qualquer lugar da página e comece a digitar!',
-    image: '/gatinho-escrevendo.png'
+    image: './gatinho-escrevendo.png'
   },
   {
     id: 'tool-edit-text',
     target: '#btn-tool-edit-text',
     title: 'Corretivo Mágico',
     text: 'Ops, tem algo errado no PDF original? Use isso para criar uma caixa branca corretiva por cima e reescrever o que quiser!',
-    image: '/gatinho-corrigindo.png'
+    image: './gatinho-corrigindo.png'
   },
   {
     id: 'tool-draw',
     target: '#btn-tool-draw',
     title: 'Lápis Mágico',
     text: 'Solte a criatividade! Rabisque, circule ou desenhe livremente pelo PDF.',
-    image: '/gatinho-pintando.png'
+    image: './gatinho-pintando.png'
   },
   {
     id: 'tool-eraser',
     target: '#btn-tool-draw', 
     title: 'Borracha',
     text: 'Dica de ouro: Quando você clica no Lápis Mágico, a ferramenta da Borracha aparece logo ali ao lado para apagar seus errinhos!',
-    image: '/gatinho-apagando.png'
+    image: './gatinho-apagando.png'
   },
   {
     id: 'tool-image',
     target: '#btn-tool-image',
     title: 'Imagens e Figurinhas',
     text: 'Cole suas imagens favoritas no PDF. É só selecionar a ferramenta e clicar onde quer colocar a imagem!',
-    image: '/gatinho-imagem.png' 
+    image: './gatinho-imagem.png' 
   },
   {
     id: 'outro',
     target: null,
     title: 'Tudo Pronto! ⋆˚✿˖°',
     text: 'Agora você já sabe todos os meus segredos! Divirta-se editando seus PDFs e me chame se precisar de novo clicando no botão de ajuda!',
-    image: '/gatinho-comemorando.png'
+    image: './gatinho-comemorando.png'
   }
 ];
 

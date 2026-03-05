@@ -215,10 +215,10 @@ export function PDFEditor() {
             </div>
 
             <div className="absolute left-[238px] ml-4 top-1/2 -translate-y-1/2 z-[60] pointer-events-none opacity-100 transition-all">
-              <img src="/gatitos.png" alt="Gatinhos a Espreitar" className="w-[200px] h-auto drop-shadow-[0_10px_15px_rgba(244,114,182,0.3)] animate-in fade-in slide-in-from-left-8 duration-700" />
+              <img src="./gatitos.png" alt="Gatinhos a Espreitar" className="w-[200px] h-auto drop-shadow-[0_10px_15px_rgba(244,114,182,0.3)] animate-in fade-in slide-in-from-left-8 duration-700" />
             </div>
             <div className="absolute right-[10px] top-2/3 -translate-y-1/2 z-[60] pointer-events-none opacity-100 transition-all">
-              <img src="/gatito-branco.png" alt="Gatinhos no Lado Direito" className="w-[148px] h-auto drop-shadow-[0_10px_15px_rgba(244,114,182,0.3)] animate-in fade-in slide-in-from-left-8 duration-700" />
+              <img src="./gatito-branco.png" alt="Gatinhos no Lado Direito" className="w-[148px] h-auto drop-shadow-[0_10px_15px_rgba(244,114,182,0.3)] animate-in fade-in slide-in-from-left-8 duration-700" />
             </div>
 
             <PDFCanvas

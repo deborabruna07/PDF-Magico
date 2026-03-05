@@ -1,16 +1,16 @@
 import { Sparkles } from 'lucide-react';
 
 const PAWS = [
-  { id: 1, name: 'Branquinha', src: '/patinha 1.png' },
-  { id: 2, name: 'Malhada', src: '/patinha 2.png' },
-  { id: 3, name: 'Tigrada', src: '/patinha 3.png' },
-  { id: 4, name: 'Rosinha', src: '/patinha 4.png' },
-  { id: 5, name: 'Pretinha', src: '/patinha 5.png' },
-  { id: 6, name: 'Caramelo', src: '/patinha 6.png' },
-  { id: 7, name: 'Tricolor', src: '/patinha 7.png' },
-  { id: 8, name: 'Noturna', src: '/patinha 8.png' },
-  { id: 9, name: 'Siamesa', src: '/patinha 9.png' },
-  { id: 10, name: 'Cinzinha', src: '/patinha 10.png' },
+  { id: 1, name: 'Branquinha', src: './patinha 1.png' },
+  { id: 2, name: 'Malhada', src: './patinha 2.png' },
+  { id: 3, name: 'Tigrada', src: './patinha 3.png' },
+  { id: 4, name: 'Rosinha', src: './patinha 4.png' },
+  { id: 5, name: 'Pretinha', src: './patinha 5.png' },
+  { id: 6, name: 'Caramelo', src: './patinha 6.png' },
+  { id: 7, name: 'Tricolor', src: './patinha 7.png' },
+  { id: 8, name: 'Noturna', src: './patinha 8.png' },
+  { id: 9, name: 'Siamesa', src: './patinha 9.png' },
+  { id: 10, name: 'Cinzinha', src: './patinha 10.png' },
 ];
 
 interface CursorSelectionProps {

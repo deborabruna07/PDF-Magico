@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -10,7 +11,29 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "electron:start": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder build --windows"
+  },
+  "build": {
+    "appId": "com.pdfmagico.app",
+    "productName": "PDF Magico",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "win": {
+      "icon": "public/favicon.ico"
+    },
+    "nsis": {
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PDF Magico"
+    },
+    "npmRebuild": false,
+    "files": [
+      "dist/**/*",
+      "main.cjs"
+    ]
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -77,6 +100,8 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
+    "electron": "^30.5.1",
+    "electron-builder": "^24.13.3",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
