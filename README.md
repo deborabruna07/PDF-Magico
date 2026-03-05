@@ -1,4 +1,4 @@
-```markdown
+```
 # 🐾 PDF Mágico (Editor de PDFs)
 
 Um editor de PDF incrivelmente fofo, rápido e interativo. O **PDF Mágico** permite que você edite, desenhe, adicione imagens e textos aos seus documentos, com uma interface amigável guiada por assistentes felinos! ✨ Agora disponível tanto para web quanto como **Aplicativo de Desktop**! 🖥️
@@ -83,5 +83,3 @@ Desenvolvido com ❤ e muitos ronrons por <strong>Débora Bruna</strong>.
 </div>
 
 ---
-
-```
