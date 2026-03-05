@@ -1,4 +1,3 @@
-```
 # 🐾 PDF Mágico (Editor de PDFs)
 
 Um editor de PDF incrivelmente fofo, rápido e interativo. O **PDF Mágico** permite que você edite, desenhe, adicione imagens e textos aos seus documentos, com uma interface amigável guiada por assistentes felinos! ✨ Agora disponível tanto para web quanto como **Aplicativo de Desktop**! 🖥️
@@ -28,8 +27,9 @@ Este projeto foi construído com foco em performance e uma UI/UX impecável, uti
 ## 🚀 Como Rodar o Projeto Localmente
 
 1. **Clone este repositório:**
+
 ```bash
-git clone [https://github.com/SEU_USUARIO/pdf-magico.git](https://github.com/SEU_USUARIO/pdf-magico.git)
+git clone https://github.com/SEU_USUARIO/pdf-magico.git
 
 ```
 
@@ -61,18 +61,18 @@ npm run dev
 Se quiser rodar o PDF Mágico como um programa de computador independente:
 
 * **Para testar a versão Desktop localmente:**
+
 ```bash
 npm run electron:start
 
 ```
 
-
 * **Para criar o instalador `.exe` (Build final):**
+
 ```bash
 npm run electron:build
 
 ```
-
 
 *O seu instalador será gerado dentro da pasta `dist_electron` pronto para ser instalado e usado!*
 
