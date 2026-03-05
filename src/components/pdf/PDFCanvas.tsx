@@ -12,14 +12,16 @@ interface PDFCanvasProps {
   onAddAnnotation: (annotation: Annotation) => void;
   onRemoveAnnotation: (id: string) => void;
   onUpdateAnnotation: (id: string, updates: Partial<Annotation>, replaceHistory?: boolean) => void;
+  onSaveHistorySnapshot?: () => void; 
   drawColor?: string;
   drawWidth?: number;
   userZoom?: number;
+  rotation?: number; // ✨ Propriedade vital para a rotação
 }
 
 export function PDFCanvas({
-  pdfDoc, pageIndex, activeTool, annotations, onAddAnnotation, onRemoveAnnotation, onUpdateAnnotation,
-  drawColor = '#f472b6', drawWidth = 3, userZoom = 1
+  pdfDoc, pageIndex, activeTool, annotations, onAddAnnotation, onRemoveAnnotation, onUpdateAnnotation, onSaveHistorySnapshot,
+  drawColor = '#f472b6', drawWidth = 3, userZoom = 1, rotation = 0 // ✨ Valor padrão seguro
 }: PDFCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -33,40 +35,82 @@ export function PDFCanvas({
   const [dragInfo, setDragInfo] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
   const [rotatingId, setRotatingId] = useState<string | null>(null);
 
+  const [isRendering, setIsRendering] = useState(true);
+  const hasSavedEraserHistory = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
+    setIsRendering(true); 
+
     (async () => {
-      const page = await pdfDoc.getPage(pageIndex + 1);
-      const baseViewport = page.getViewport({ scale: 1 });
-      const container = canvasRef.current?.closest('.pdf-canvas-container');
-      if (!container || cancelled) return;
+      try {
+        const page = await pdfDoc.getPage(pageIndex + 1);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const container = canvasRef.current?.closest('.pdf-canvas-container');
+        if (!container || cancelled) return;
 
-      const maxWidth = container.clientWidth - 80;
-      const maxHeight = container.clientHeight - 80;
-      const fitScale = Math.min(maxWidth / baseViewport.width, maxHeight / baseViewport.height, 2);
-      const finalScale = fitScale * userZoom;
+        const maxWidth = container.clientWidth - 80;
+        const maxHeight = container.clientHeight - 80;
+        const fitScale = Math.min(maxWidth / baseViewport.width, maxHeight / baseViewport.height, 2);
+        const finalScale = fitScale * userZoom;
 
-      const viewport = page.getViewport({ scale: finalScale });
-      const canvas = canvasRef.current;
-      if (!canvas || cancelled) return;
+        const viewport = page.getViewport({ scale: finalScale });
+        const canvas = canvasRef.current;
+        if (!canvas || cancelled) return;
 
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      setCanvasSize({ width: viewport.width, height: viewport.height });
-      setScale(finalScale);
+        const pixelRatio = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * pixelRatio);
+        canvas.height = Math.floor(viewport.height * pixelRatio);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
 
-      const ctx = canvas.getContext('2d')!;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      await page.render({ canvasContext: ctx, viewport }).promise;
+        setCanvasSize({ width: viewport.width, height: viewport.height });
+        setScale(finalScale);
+
+        const ctx = canvas.getContext('2d')!;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const transform = pixelRatio !== 1 ? [pixelRatio, 0, 0, pixelRatio, 0, 0] : undefined;
+        
+        await page.render({ canvasContext: ctx, viewport, transform }).promise;
+      } catch (error) {
+        console.error("Erro ao renderizar a página do PDF:", error);
+      } finally {
+        if (!cancelled) {
+          setTimeout(() => {
+            if (!cancelled) setIsRendering(false);
+          }, 50);
+        }
+      }
     })();
+
     return () => { cancelled = true; };
   }, [pdfDoc, pageIndex, userZoom]);
 
   const getRelativePos = useCallback((e: React.MouseEvent | MouseEvent) => {
-    const rect = overlayRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-    return { x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale };
-  }, [scale]);
+    const overlay = overlayRef.current;
+    if (!overlay) return { x: 0, y: 0 };
+    
+    const rect = overlay.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    
+    // Calcula os cliques tendo em conta a rotação atual da folha!
+    const angle = (-rotation * Math.PI) / 180;
+    const rx = dx * Math.cos(angle) - dy * Math.sin(angle);
+    const ry = dx * Math.sin(angle) + dy * Math.cos(angle);
+    
+    const isRotated = (rotation % 180) !== 0;
+    const unrotatedWidth = isRotated ? rect.height : rect.width;
+    const unrotatedHeight = isRotated ? rect.width : rect.height;
+    
+    const x = rx + unrotatedWidth / 2;
+    const y = ry + unrotatedHeight / 2;
+    
+    return { x: x / scale, y: y / scale };
+  }, [scale, rotation]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     const pos = getRelativePos(e);
@@ -107,7 +151,13 @@ export function PDFCanvas({
               }
               return p;
             });
-            if (modified) onUpdateAnnotation(a.id, { paths: newPaths }, true);
+            if (modified) {
+              if (!hasSavedEraserHistory.current && onSaveHistorySnapshot) {
+                onSaveHistorySnapshot();
+                hasSavedEraserHistory.current = true;
+              }
+              onUpdateAnnotation(a.id, { paths: newPaths }, true);
+            }
           }
         });
       } else {
@@ -119,7 +169,7 @@ export function PDFCanvas({
         y: pos.y - dragInfo.offsetY
       }, true);
     }
-  }, [drawing, dragInfo, rotatingId, annotations, getRelativePos, onUpdateAnnotation, activeTool, drawColor, drawWidth, pageIndex]);
+  }, [drawing, dragInfo, rotatingId, annotations, getRelativePos, onUpdateAnnotation, onSaveHistorySnapshot, activeTool, drawColor, drawWidth, pageIndex]);
 
   const handleMouseUp = useCallback(() => {
     if (drawing && currentPath.length > 1 && drawColor !== 'eraser') {
@@ -138,21 +188,35 @@ export function PDFCanvas({
     setRotatingId(null);
   }, [drawing, currentPath, pageIndex, activeTool, onAddAnnotation, drawColor, drawWidth]);
 
+  const isTextSelectable = activeTool === 'select' || activeTool === 'text' || activeTool === 'edit-text';
+  const isImageSelectable = activeTool === 'select' || activeTool === 'image';
+
   return (
     <div className={cn(
       "pdf-canvas-container flex-1 overflow-auto scrollbar-thin bg-rose-50/40 p-10 transition-colors duration-500 relative",
       (activeTool === 'draw' || activeTool === 'sign' || drawing) && "select-none"
     )}>
       
-      {/* Aviso Fofo da Ferramenta Imagem */}
+      {isRendering && (
+        <div className="fixed inset-0 z-[100000]" style={{ cursor: 'default' }} />
+      )}
+
       {activeTool === 'image' && (
         <div className="sticky top-4 left-1/2 -translate-x-1/2 mx-auto w-max bg-white/95 backdrop-blur-sm border-2 border-pink-300 text-pink-600 px-6 py-3 rounded-full shadow-[0_10px_40px_-10px_rgba(244,114,182,0.4)] z-[200] flex items-center gap-3 animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-none">
-          <span className="text-2xl animate-bounce">🐾</span>
-          <span className="font-bold text-sm">Miaau! Clique em qualquer lugar da página para escolher a sua imagem!</span>
+          <span className="text-2xl animate-bounce">≽^•⩊•^≼</span>
+          <span className="font-bold text-sm">Miaau! Clica em qualquer lugar da página para escolher a tua imagem!</span>
         </div>
       )}
 
-      <div className="relative shadow-[0_20px_50px_-12px_rgba(244,114,182,0.15)] rounded-2xl mx-auto transition-all duration-300 mt-4" style={{ width: canvasSize.width, height: canvasSize.height }}>
+      {/* ✨ O PONTO ONDE A ROTAÇÃO SE TORNA VISUAL (transform: rotate) ✨ */}
+      <div className="relative shadow-[0_20px_50px_-12px_rgba(244,114,182,0.15)] rounded-2xl mx-auto transition-all duration-300 mt-4" 
+           style={{ 
+             width: canvasSize.width, 
+             height: canvasSize.height, 
+             transform: `rotate(${rotation}deg) translateZ(0)`,
+             backfaceVisibility: 'hidden',
+             WebkitFontSmoothing: 'antialiased' as const
+           }}>
         <canvas ref={canvasRef} className="rounded-2xl bg-white" />
         <div
           ref={overlayRef}
@@ -180,7 +244,7 @@ export function PDFCanvas({
               onAddAnnotation({
                 id, type: 'text', pageIndex, x: pos.x, y: pos.y, text: '', fontSize: 16, color: '#4c1d95',
                 backgroundColor: activeTool === 'edit-text' ? '#ffffff' : undefined,
-                fontFamily: 'Helvetica', rotation: 0, fontWeight: 'normal',
+                fontFamily: 'Helvetica', rotation: -rotation, fontWeight: 'normal',
                 width: 120, height: 30
               });
               setEditingText(id);
@@ -193,7 +257,7 @@ export function PDFCanvas({
                 const reader = new FileReader();
                 reader.onload = () => {
                   const id = crypto.randomUUID();
-                  onAddAnnotation({ id, type: 'image', pageIndex, x: getRelativePos(e).x, y: getRelativePos(e).y, width: 150, height: 150, dataUrl: reader.result as string, rotation: 0 });
+                  onAddAnnotation({ id, type: 'image', pageIndex, x: getRelativePos(e).x, y: getRelativePos(e).y, width: 150, height: 150, dataUrl: reader.result as string, rotation: -rotation });
                   setSelectedElement(id);
                 };
                 reader.readAsDataURL(input.files[0]);
@@ -205,6 +269,8 @@ export function PDFCanvas({
             if (activeTool === 'draw' || activeTool === 'sign') {
               e.preventDefault(); 
               setDrawing(true);
+              hasSavedEraserHistory.current = false; 
+              
               const pos = getRelativePos(e);
 
               if (activeTool === 'draw' && drawColor === 'eraser') {
@@ -222,7 +288,13 @@ export function PDFCanvas({
                       }
                       return p;
                     });
-                    if (modified) onUpdateAnnotation(a.id, { paths: newPaths }, true);
+                    if (modified) {
+                      if (!hasSavedEraserHistory.current && onSaveHistorySnapshot) {
+                        onSaveHistorySnapshot();
+                        hasSavedEraserHistory.current = true;
+                      }
+                      onUpdateAnnotation(a.id, { paths: newPaths }, true);
+                    }
                   }
                 });
               } else {
@@ -234,7 +306,6 @@ export function PDFCanvas({
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
-          {/* Camada de anotações (Texto e Imagem) */}
           <div className={cn(
             "absolute inset-0 z-10", 
             (drawing || activeTool === 'draw' || activeTool === 'sign') && "pointer-events-none"
@@ -278,7 +349,7 @@ export function PDFCanvas({
                         onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {ann.type === 'text' && (
+                        {ann.type === 'text' && activeTool !== 'select' && (
                           <div className="flex items-center gap-2 border-r border-pink-100 pr-2 mr-1">
                             <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-pink-200 shadow-sm hover:scale-110 transition-transform flex items-center justify-center bg-white relative">
                               <input
@@ -322,19 +393,23 @@ export function PDFCanvas({
                       </div>
                     </>
                   )}
+                  
                   {ann.type === 'image' ? (
                     <div className={cn("relative block rounded-xl transition-all", 
-                        (activeTool === 'draw' || activeTool === 'sign') ? "pointer-events-none" : "pointer-events-auto cursor-move", // Adicionado cursor-move aqui
+                        (!isImageSelectable) ? "pointer-events-none" : "pointer-events-auto cursor-move",
                         selectedElement === ann.id ? "border-2 border-pink-400 border-dashed bg-pink-400/10" : "border-2 border-transparent hover:border-pink-300/40")}
                       style={{ resize: selectedElement === ann.id ? 'both' : 'none', overflow: 'hidden', width: `${ann.width * scale}px`, height: `${ann.height * scale}px` }}
-                      onClick={(e) => { e.stopPropagation(); if (activeTool === 'select') setSelectedElement(ann.id); }}
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        if (!isImageSelectable) return;
+                        if (activeTool === 'select' || activeTool === 'image') setSelectedElement(ann.id); 
+                      }}
                       onMouseDown={(e) => {
-                        // ✨ CORREÇÃO: Lógica de arraste inteligente implementada
+                        if (!isImageSelectable) return;
                         if (activeTool === 'select' || activeTool === 'image') {
                           e.stopPropagation();
                           if (activeTool === 'select') setSelectedElement(ann.id);
                           
-                          // Checa se clicou no cantinho de redimensionar
                           const target = e.currentTarget as HTMLDivElement;
                           const rect = target.getBoundingClientRect();
                           const isResizing = selectedElement === ann.id && 
@@ -350,7 +425,7 @@ export function PDFCanvas({
                       <img src={ann.dataUrl} alt="ann" className="w-full h-full object-fill pointer-events-none rounded-lg" draggable={false} />
                     </div>
                   ) : (
-                    <div className={cn("transition-all", (activeTool === 'draw' || activeTool === 'sign') ? "pointer-events-none" : "pointer-events-auto")} onMouseDown={(e) => { if (activeTool === 'select' && editingText !== ann.id) { e.stopPropagation(); setDragInfo({ id: ann.id, offsetX: getRelativePos(e).x - ann.x, offsetY: getRelativePos(e).y - ann.y }); } }}>
+                    <div className={cn("transition-all", (!isTextSelectable) ? "pointer-events-none" : "pointer-events-auto")} onMouseDown={(e) => { if (!isTextSelectable) return; if (activeTool === 'select' && editingText !== ann.id) { e.stopPropagation(); setDragInfo({ id: ann.id, offsetX: getRelativePos(e).x - ann.x, offsetY: getRelativePos(e).y - ann.y }); } }}>
                       {editingText === ann.id ? (
                         <textarea value={ann.text} onChange={(e) => onUpdateAnnotation(ann.id, { text: e.target.value }, true)}
                           onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
@@ -359,13 +434,13 @@ export function PDFCanvas({
                             const target = e.target as HTMLTextAreaElement;
                             if (target.offsetWidth && target.offsetHeight) onUpdateAnnotation(ann.id, { width: target.offsetWidth / scale, height: target.offsetHeight / scale });
                           }}
-                          className={cn("rounded-xl px-0 py-0 outline-none block backdrop-blur-sm transition-all border-2 font-medium", (activeTool === 'draw' || activeTool === 'sign') ? "pointer-events-none" : "pointer-events-auto", ann.backgroundColor ? "border-pink-500 bg-white shadow-lg" : "border-pink-400 bg-white/90 shadow-md")}
+                          className={cn("rounded-xl px-0 py-0 outline-none block backdrop-blur-sm transition-all border-2 font-medium", (!isTextSelectable) ? "pointer-events-none" : "pointer-events-auto", ann.backgroundColor ? "border-pink-500 bg-white shadow-lg" : "border-pink-400 bg-white/90 shadow-md")}
                           style={{ resize: 'both', whiteSpace: 'pre', overflow: 'hidden', fontSize: ann.fontSize * scale, fontFamily: ann.fontFamily || 'Helvetica', fontWeight: ann.fontWeight || 'normal', color: ann.color, width: ann.width ? `${ann.width * scale}px` : '120px', height: ann.height ? `${ann.height * scale}px` : '30px', lineHeight: '1.1' }}
                           autoFocus onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setEditingText(null); } }}
                         />
                       ) : (
                         <div className={cn("whitespace-pre block px-0 py-0 transition-all rounded-xl border-2 font-medium", activeTool === 'select' ? "cursor-move" : "cursor-text",
-                          (activeTool === 'draw' || activeTool === 'sign') ? "pointer-events-none" : "pointer-events-auto",
+                          (!isTextSelectable) ? "pointer-events-none" : "pointer-events-auto",
                           ann.backgroundColor ? (selectedElement === ann.id && activeTool === 'select' ? "bg-white border-pink-500 border-dashed shadow-md" : "bg-white border-transparent") : (selectedElement === ann.id && activeTool === 'select' ? "border-pink-500 border-dashed bg-pink-400/20" : "border-transparent hover:border-pink-400 hover:bg-pink-50/50")
                         )}
                           style={{
@@ -380,8 +455,13 @@ export function PDFCanvas({
                             minHeight: ann.backgroundColor ? '20px' : 'auto',
                             lineHeight: '1.1'
                           }}
-                          onClick={(e) => { e.stopPropagation(); if (activeTool !== 'select') { setEditingText(ann.id); setSelectedElement(null); } else { setSelectedElement(ann.id); } }} >
-                          {ann.text || (ann.backgroundColor ? '' : (activeTool === 'select' ? '' : 'Clique para digitar'))}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (!isTextSelectable) return;
+                            if (activeTool !== 'select') { setEditingText(ann.id); setSelectedElement(null); } 
+                            else { setSelectedElement(ann.id); } 
+                          }} >
+                          {ann.text || (ann.backgroundColor ? '' : (activeTool === 'select' ? '' : 'Clica para digitar'))}
                         </div>
                       )}
                     </div>
@@ -391,14 +471,13 @@ export function PDFCanvas({
             })}
           </div>
 
-          {/* SVG de desenho (com lógica avançada para respeitar as falhas apagadas) */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-[100]">
             {annotations.filter((a): a is DrawAnnotation => a.type === 'draw' && a.pageIndex === pageIndex).map((d) => {
               let dString = '';
               let isStart = true;
               d.paths.forEach((p) => {
                 if (p.erased) {
-                  isStart = true; // Quebra a linha se o ponto foi apagado
+                  isStart = true;
                 } else {
                   if (isStart) {
                     dString += `M ${p.x * scale} ${p.y * scale} `;
@@ -409,7 +488,7 @@ export function PDFCanvas({
                 }
               });
 
-              if (!dString.trim()) return null; // Não renderiza caminhos vazios
+              if (!dString.trim()) return null; 
 
               return (
                 <path 

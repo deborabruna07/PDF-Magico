@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ✨ Adicionado importação das fontes para o menu funcionar corretamente */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Comic+Neue:wght@400;700&display=swap');
-
 @layer base {
   :root {
     --background: 340 100% 99%;
